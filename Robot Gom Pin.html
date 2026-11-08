@@ -1,0 +1,2335 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Robot Gom Pin</title>
+<style>
+/* ===================== BIẾN MÀU & NỀN TẢNG ===================== */
+:root{
+  --bg:#fbf3e2; --panel:#fff8ea; --panel-in:#fff1d6; --body-bg:#f7ecd3;
+  --ink:#3a3d4d; --muted:#8c8472; --line:#eadfc6;
+  --mint:#a6e3cd; --mint-d:#6cc7a5; --blue:#4c8df6; --orange:#ff9a3c; --yellow:#ffd23f; --pink:#ff5d7a;
+  --c-move:#b5e6a2; --c-move-d:#86c46f;
+  --c-turn:#d4bff5; --c-turn-d:#a98ee0;
+  --c-action:#ffd2a1; --c-action-d:#eba660;
+  --c-control:#aed2fb; --c-control-d:#7fb0ec;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;background:var(--bg);color:var(--ink);
+  font-family:"Nunito","Trebuchet MS","Segoe UI",system-ui,-apple-system,sans-serif;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body{background:radial-gradient(circle at 15% 8%,#fffaf0 0,transparent 45%),radial-gradient(circle at 90% 95%,#e6f6ee 0,transparent 40%),var(--bg)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+#app{position:fixed;inset:0}
+.screen{position:absolute;inset:0;display:none;flex-direction:column}
+.screen.active{display:flex}
+.spacer{flex:1}
+
+/* ===================== NÚT & CHIP ===================== */
+.btn{border:0;background:#fff;border-radius:16px;padding:9px 16px;font-weight:800;min-height:44px;
+  box-shadow:0 4px 0 #e2d3b3,inset 0 0 0 2px var(--line);transition:transform .08s,box-shadow .08s,filter .15s;white-space:nowrap}
+.btn:hover{filter:brightness(1.04)}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #e2d3b3,inset 0 0 0 2px var(--line)}
+.btn.primary{background:var(--mint);box-shadow:0 4px 0 var(--mint-d)}
+.btn.primary:active{box-shadow:0 1px 0 var(--mint-d)}
+.btn.go{background:#8be3ad;box-shadow:0 4px 0 #52b97c}
+.btn.go:active{box-shadow:0 1px 0 #52b97c}
+.btn.warn{background:#ffd9a8;box-shadow:0 4px 0 #eba660}
+.btn.big{font-size:20px;padding:14px 26px;min-height:56px}
+.btn.sm{padding:6px 12px;min-height:38px;font-size:14px}
+.btn:disabled{opacity:.45;pointer-events:none}
+.icon-btn{border:0;width:44px;height:44px;border-radius:14px;background:#fff;font-size:20px;
+  box-shadow:0 4px 0 #e2d3b3,inset 0 0 0 2px var(--line)}
+.icon-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #e2d3b3}
+.chip{background:#fff;border-radius:999px;padding:6px 12px;font-weight:800;font-size:14px;box-shadow:inset 0 0 0 2px var(--line);white-space:nowrap}
+.chip.flash{animation:flash .5s}
+@keyframes flash{0%,100%{background:#fff}40%{background:#ffc9d3}}
+
+/* ===================== THANH TIÊU ĐỀ ===================== */
+.bar{display:flex;align-items:center;gap:10px;padding:10px 12px;flex:0 0 auto}
+.bar .title{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+.bar .title b{font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .title small{color:var(--muted);font-weight:700;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ===================== MÀN HÌNH BẮT ĐẦU ===================== */
+#scr-start{align-items:center;justify-content:center;overflow:auto;padding:16px}
+.start-card{width:min(560px,100%);background:var(--panel);border-radius:32px;padding:22px 22px 20px;text-align:center;
+  box-shadow:0 8px 0 #ecdcb8,0 18px 40px rgba(120,90,30,.12);margin:auto}
+#hero{display:block;margin:0 auto;width:220px;height:170px;max-width:60%}
+h1{margin:0;font-size:clamp(32px,8vw,48px);line-height:1;letter-spacing:-1px}
+h1 span{color:var(--blue)}
+.sub{margin:10px auto 14px;max-width:44ch;color:#5d5a50;font-weight:600;line-height:1.45}
+.stat-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+.menu{display:flex;flex-direction:column;gap:10px;align-items:stretch;max-width:340px;margin:0 auto}
+.menu .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.how{list-style:none;padding:0;margin:16px 0 0;display:grid;gap:6px;text-align:left;font-size:14px;font-weight:700;color:#5d5a50}
+.how li{background:#fff;border-radius:14px;padding:8px 12px;box-shadow:inset 0 0 0 2px var(--line)}
+.fixed-tr{position:absolute;top:12px;right:12px}
+
+/* ===================== BẢN ĐỒ CHỌN MÀN ===================== */
+#map-body{flex:1;overflow:auto;padding:4px 14px 24px;max-width:860px;width:100%;margin:0 auto}
+.zone{background:var(--panel);border-radius:24px;padding:14px;margin-bottom:14px;box-shadow:0 5px 0 #ecdcb8}
+.zone h3{margin:0 0 2px;font-size:18px}
+.zone p{margin:0 0 10px;color:var(--muted);font-weight:700;font-size:13px}
+.lv-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.lv{border:0;border-radius:18px;padding:8px 2px 6px;background:var(--mint);box-shadow:0 4px 0 var(--mint-d);
+  display:flex;flex-direction:column;align-items:center;gap:0;min-height:76px;font-weight:900}
+.lv:active{transform:translateY(3px);box-shadow:0 1px 0 var(--mint-d)}
+.lv .n{font-size:22px;line-height:1.1}
+.lv .s{font-size:13px;letter-spacing:1px;color:#e0a800;text-shadow:0 1px 0 rgba(0,0,0,.12);min-height:16px}
+.lv .s i{font-style:normal;color:#fff;opacity:.7;text-shadow:none}
+.lv .d{font-size:10px;color:#2e6f58;font-weight:800}
+.lv.todo{background:#c9efe0}
+.lv.locked{background:#e8e1d0;box-shadow:0 4px 0 #cfc5ac;color:#a39a85;pointer-events:none}
+@media (max-width:560px){.lv-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* ===================== MÀN HÌNH CHƠI ===================== */
+.play{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(310px,1fr);gap:12px;padding:0 12px 12px}
+.left{display:flex;flex-direction:column;min-height:0;min-width:0;gap:8px}
+.right{display:flex;flex-direction:column;min-height:0;min-width:0;gap:8px}
+.boardwrap{flex:1;min-height:0;position:relative;border-radius:24px;background:#fff8ea;box-shadow:inset 0 0 0 2px var(--line)}
+canvas{display:block}
+.boardwrap canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+#banner{position:absolute;left:10px;right:10px;bottom:10px;padding:10px 14px;border-radius:16px;background:#fff;font-weight:800;font-size:14px;
+  box-shadow:0 4px 0 #e2d3b3,inset 0 0 0 2px var(--line);display:none;text-align:center}
+#banner.warn{background:#ffe3c2}
+#banner.show{display:block;animation:pop .25s}
+.hud{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.goal{font-size:12px;font-weight:800;color:var(--muted)}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ctrl .run{min-width:116px}
+.seg{display:inline-flex;background:#fff;border-radius:14px;padding:3px;box-shadow:inset 0 0 0 2px var(--line)}
+.seg button{border:0;background:transparent;border-radius:11px;padding:6px 10px;font-weight:800;font-size:13px;min-height:34px}
+.seg button.on{background:var(--mint);box-shadow:0 2px 0 var(--mint-d)}
+.panel{background:var(--panel);border-radius:22px;padding:10px;box-shadow:0 4px 0 #ecdcb8}
+.panel h4{margin:0 0 6px;font-size:13px;color:var(--muted);display:flex;justify-content:space-between;gap:8px;font-weight:900;letter-spacing:.3px}
+.tip{display:none;background:#fff;border-radius:16px;padding:9px 34px 9px 12px;font-weight:700;font-size:14px;line-height:1.4;position:relative;
+  box-shadow:inset 0 0 0 2px #ffd9a8,0 3px 0 #f2c98f}
+.tip.show{display:block;animation:pop .25s}
+.tip button{position:absolute;right:6px;top:6px;border:0;background:transparent;font-size:16px;width:26px;height:26px}
+#tools{display:flex;flex-wrap:wrap;gap:8px}
+#tools .blk{flex:0 0 auto}
+#tools .blk.off{opacity:.4}
+#tools .blk.hint-glow .blk-head,#tools .blk.hint-glow{animation:glow 1s infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(255,154,60,.0),inset 0 -3px 0 var(--bd)}50%{box-shadow:0 0 0 5px rgba(255,154,60,.75),inset 0 -3px 0 var(--bd)}}
+#prog{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:8px;background:var(--panel);border-radius:22px;box-shadow:0 4px 0 #ecdcb8;--notch:var(--panel-in)}
+.psec{background:var(--panel-in);border-radius:16px;padding:4px 4px 2px}
+.psec-h{display:flex;align-items:center;gap:8px;padding:4px 8px;font-weight:900;font-size:13px;color:#7a6a45}
+.psec-h input{border:0;background:#fff;border-radius:10px;padding:4px 8px;font-weight:800;width:130px;box-shadow:inset 0 0 0 2px var(--line);-webkit-user-select:text;user-select:text}
+.psec-h .cnt{margin-left:auto;font-weight:800;color:var(--muted);font-size:12px}
+
+/* ===================== KHỐI LỆNH (mảnh ghép) ===================== */
+.blk{--bc:var(--c-move);--bd:var(--c-move-d);position:relative;touch-action:manipulation}
+.g-move{--bc:var(--c-move);--bd:var(--c-move-d)}
+.g-turn{--bc:var(--c-turn);--bd:var(--c-turn-d)}
+.g-action{--bc:var(--c-action);--bd:var(--c-action-d)}
+.g-control{--bc:var(--c-control);--bd:var(--c-control-d)}
+.blk-head{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:12px;font-weight:800;font-size:15px;cursor:pointer;
+  color:#2c3340;min-height:42px;position:relative;white-space:nowrap}
+.blk:not(.container)>.blk-head{background:var(--bc);box-shadow:inset 0 -3px 0 var(--bd)}
+.blk.container{background:var(--bc);border-radius:14px;box-shadow:0 3px 0 var(--bd)}
+.blk.container>.blk-head{border-radius:14px 14px 0 0}
+.blk .ic{font-size:17px;width:22px;text-align:center}
+.blk-body{margin:0 0 0 14px;padding:4px 4px 2px 6px;background:var(--body-bg);--notch:var(--body-bg)}
+.blk-foot{height:12px;position:relative}
+.lbl{font-size:12px;font-weight:900;color:#6c6a60;padding:2px 6px 0}
+.rep{display:inline-flex;align-items:center;gap:4px;margin-left:2px}
+.rep b{min-width:16px;text-align:center;font-size:16px}
+.mini{border:0;width:26px;height:26px;border-radius:9px;background:rgba(255,255,255,.75);font-weight:900;font-size:16px;line-height:1;padding:0}
+.mini:active{background:#fff}
+.blist{display:flex;flex-direction:column;gap:5px;padding:5px;min-height:46px;border-radius:12px;position:relative}
+.blist.active{outline:3px dashed #4c8df6;outline-offset:-1px;background:rgba(76,141,246,.07)}
+.blist>.blk>.blk-head::before{content:"";position:absolute;left:18px;top:0;width:20px;height:5px;background:var(--notch);border-radius:0 0 7px 7px;z-index:1}
+.blist>.blk:not(.container)>.blk-head::after,.blist>.blk.container>.blk-foot::after{content:"";position:absolute;left:18px;bottom:-7px;width:20px;height:7px;background:var(--bc);border-radius:0 0 7px 7px;z-index:2}
+.slot{border:2px dashed rgba(120,100,60,.22);border-radius:10px;min-height:28px;display:flex;align-items:center;justify-content:center;
+  font-size:12px;color:var(--muted);font-weight:800;cursor:pointer}
+.blist.empty>.slot{min-height:46px}
+.blk.running>.blk-head{box-shadow:0 0 0 3px var(--orange),0 0 14px rgba(255,154,60,.8);filter:brightness(1.07);z-index:3}
+.blk.bad>.blk-head{box-shadow:0 0 0 3px var(--pink);animation:glow2 .8s infinite}
+@keyframes glow2{50%{box-shadow:0 0 0 6px rgba(255,93,122,.5)}}
+.blk.dragging{opacity:.3}
+.hghost{border:3px dashed var(--bd,#999);border-radius:12px;padding:8px 12px;font-weight:900;font-size:14px;color:#555;background:rgba(255,255,255,.6);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.45}}
+.drag-ghost{position:fixed;left:0;top:0;z-index:1000;pointer-events:none;opacity:.92;filter:drop-shadow(0 8px 10px rgba(0,0,0,.25))}
+.drag-ghost .blk-head{border-radius:12px;background:var(--bc);box-shadow:inset 0 -3px 0 var(--bd)}
+#dropLine{position:fixed;height:5px;border-radius:3px;background:var(--orange);pointer-events:none;z-index:999;display:none;box-shadow:0 0 10px rgba(255,154,60,.8)}
+
+/* ===================== TRÌNH SOẠN MÀN ===================== */
+.ed-panel{overflow:auto;gap:10px}
+.ed-panel .panel{display:flex;flex-direction:column;gap:8px}
+.ed-tools{display:flex;flex-wrap:wrap;gap:6px}
+.ed-tools button{border:0;background:#fff;border-radius:12px;padding:6px 10px;font-weight:800;font-size:13px;min-height:38px;box-shadow:inset 0 0 0 2px var(--line)}
+.ed-tools button.on{background:var(--mint);box-shadow:inset 0 0 0 2px var(--mint-d)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-weight:800;font-size:14px}
+.row select,.row input[type=number]{border:0;border-radius:10px;padding:6px 8px;background:#fff;box-shadow:inset 0 0 0 2px var(--line);font-weight:800}
+.row input[type=number]{width:68px}
+textarea{width:100%;border:0;border-radius:12px;padding:8px;background:#fff;box-shadow:inset 0 0 0 2px var(--line);font-family:monospace;font-size:12px;resize:vertical;-webkit-user-select:text;user-select:text}
+.ed-allow label{display:inline-flex;align-items:center;gap:4px;margin-right:8px;font-weight:800;font-size:13px}
+
+/* ===================== HỘP THOẠI ===================== */
+#modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(58,61,77,.45);backdrop-filter:blur(3px);z-index:2000}
+#modal.show{display:flex}
+#modal .card{width:min(440px,100%);max-height:100%;overflow:auto;background:var(--panel);border-radius:30px;padding:22px;text-align:center;
+  box-shadow:0 8px 0 #ecdcb8,0 20px 50px rgba(0,0,0,.25);animation:pop .3s cubic-bezier(.2,1.4,.4,1)}
+@keyframes pop{from{transform:scale(.85);opacity:0}to{transform:none;opacity:1}}
+.card h2{margin:0 0 6px;font-size:26px}
+.card p{margin:6px 0;font-weight:700;color:#5d5a50;line-height:1.45}
+.card .stars{display:flex;justify-content:center;gap:6px;margin:6px 0 10px}
+.card .stars span{font-size:56px;line-height:1;color:#dcd2bb;transform:scale(.4);opacity:0}
+.card .stars span.on{color:#ffc928;text-shadow:0 3px 0 #e0a100;animation:starin .55s forwards cubic-bezier(.2,1.6,.4,1)}
+.card .stars span.off{animation:starin .4s forwards}
+@keyframes starin{to{transform:scale(1);opacity:1}}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.stats div{background:#fff;border-radius:14px;padding:8px;font-weight:800;font-size:13px;box-shadow:inset 0 0 0 2px var(--line);color:var(--muted)}
+.stats b{display:block;font-size:22px;color:var(--ink)}
+.record{display:inline-block;background:var(--orange);color:#fff;font-weight:900;border-radius:999px;padding:6px 16px;margin:4px 0 8px;letter-spacing:1px;animation:wob .7s infinite alternate;box-shadow:0 3px 0 #d57a1c}
+@keyframes wob{from{transform:rotate(-3deg) scale(1)}to{transform:rotate(3deg) scale(1.06)}}
+.card .btns{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:14px}
+.card ul{text-align:left;padding-left:20px;font-weight:700;line-height:1.5;margin:8px 0}
+.card kbd{background:#fff;border-radius:6px;padding:1px 6px;box-shadow:inset 0 0 0 2px var(--line);font-family:inherit;font-weight:900;font-size:12px}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;background:#fff;border-radius:16px;padding:10px 14px;margin:8px 0;font-weight:800;box-shadow:inset 0 0 0 2px var(--line)}
+.set-row small{display:block;font-weight:700;color:var(--muted);font-size:12px;margin-top:2px}
+.switch{flex:none;width:56px;height:32px;border:0;border-radius:999px;background:#d8cfba;position:relative;padding:0;transition:background .2s;box-shadow:inset 0 2px 0 rgba(0,0,0,.08)}
+.switch i{position:absolute;left:3px;top:3px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 2px 0 rgba(0,0,0,.18);transition:transform .2s}
+.switch.on{background:var(--mint-d)}.switch.on i{transform:translateX(24px)}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(30px);background:#3a3d4d;color:#fff;padding:10px 16px;border-radius:14px;
+  font-weight:800;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:3000;max-width:92vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%)}
+
+/* ===================== RESPONSIVE: DỌC / NGANG ===================== */
+.screen{height:100vh;height:100dvh}
+@media (max-aspect-ratio:1/1),(max-width:720px){
+  /* Dọc: bàn cờ + nút điều khiển luôn ở trên cùng, chỉ khung chương trình cuộn bên trong */
+  .play{grid-template-columns:minmax(0,1fr);grid-template-rows:max-content minmax(0,1fr);gap:8px;padding:0 10px 10px;overflow:hidden}
+  .left{flex:none}
+  .left,.right,.panel,#tools,#prog{min-width:0}
+  .left .boardwrap{flex:none;height:min(36dvh,calc(100vw - 20px))}
+  .right{min-height:0}
+  #tools{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+  #tools .blk{flex:0 0 auto}
+  .panel h4{margin-bottom:4px}
+  #prog{flex:1;min-height:90px}
+  .ctrl{gap:6px}.ctrl .btn{padding:6px 11px;min-height:40px}.ctrl .run{min-width:100px}
+  .tx{display:none}
+  .hud{gap:5px}.chip{padding:4px 10px;font-size:13px}
+  .ed-panel{overflow:auto}
+}
+@media (max-height:520px) and (min-aspect-ratio:1/1){
+  .bar{padding:4px 10px}.btn{min-height:38px;padding:5px 12px}.icon-btn{width:38px;height:38px}
+  .play{gap:8px;padding:0 8px 6px}.blk-head{min-height:36px;padding:5px 10px}.panel{padding:6px}
+  .bar .title small{display:none}
+  #tools{flex-wrap:nowrap;overflow-x:auto;padding-bottom:3px}.panel h4{display:none}#prog{min-height:120px}
+  .tx,.goal{display:none}.ctrl{gap:5px}.ctrl .btn{padding:4px 10px}.ctrl .run{min-width:90px}.hud{gap:4px}
+}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ MÀN HÌNH BẮT ĐẦU ============ -->
+  <section id="scr-start" class="screen active">
+    <button class="icon-btn snd-btn fixed-tr" title="Bật/tắt âm"></button>
+    <div class="start-card">
+      <canvas id="hero" width="440" height="340"></canvas>
+      <h1>Robot <span>Gom Pin</span></h1>
+      <p class="sub">Chú robot nhỏ bị lạc trong phòng thí nghiệm và pin sắp cạn! Hãy xếp chuỗi khối lệnh để robot gom hết pin rồi chạy tới cổng thoát.</p>
+      <div class="stat-row">
+        <div class="chip">⭐ Tổng sao: <b id="st-stars">0</b>/<span id="st-max">270</span></div>
+        <div class="chip">🏆 Điểm cao nhất: <b id="st-score">0</b></div>
+      </div>
+      <div class="menu">
+        <button class="btn big primary" id="btn-play">▶ Chơi</button>
+        <div class="row2">
+          <button class="btn" id="btn-levels">🗺 Chọn màn</button>
+          <button class="btn" id="btn-editor">🛠 Soạn màn</button>
+        </div>
+        <div class="row2"><button class="btn" id="btn-help">❓ Hướng dẫn</button><button class="btn" id="btn-settings">⚙ Cài đặt</button></div>
+      </div>
+      <ol class="how">
+        <li>1️⃣ Chạm hoặc kéo khối lệnh vào khung chương trình.</li>
+        <li>2️⃣ Bấm <b>Chạy</b> (Enter) và xem robot thực hiện từng bước.</li>
+        <li>3️⃣ Gom đủ 🔋 rồi tới cổng 🚪. Ít khối + ít bước = nhiều sao!</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ============ BẢN ĐỒ CHỌN MÀN ============ -->
+  <section id="scr-map" class="screen">
+    <header class="bar">
+      <button class="btn sm" id="map-back">← Menu</button>
+      <div class="title"><b>Bản đồ phòng thí nghiệm</b><small id="map-sub"></small></div>
+      <span class="spacer"></span>
+      <button class="icon-btn" id="map-settings" title="Cài đặt">⚙</button>
+      <button class="icon-btn snd-btn" title="Bật/tắt âm"></button>
+    </header>
+    <div id="map-body"></div>
+  </section>
+
+  <!-- ============ MÀN HÌNH CHƠI ============ -->
+  <section id="scr-game" class="screen">
+    <header class="bar">
+      <button class="btn sm" id="g-back">☰ Màn</button>
+      <div class="title"><b id="g-title"></b><small id="g-sub"></small></div>
+      <span class="spacer"></span>
+      <button class="icon-btn" id="g-pause" title="Tạm dừng (P)">⏸</button>
+      <button class="icon-btn snd-btn" title="Bật/tắt âm"></button>
+    </header>
+    <div class="play">
+      <div class="left">
+        <div class="boardwrap" id="boardWrap"><canvas id="board"></canvas><div id="banner"></div></div>
+        <div class="hud">
+          <span class="chip" id="h-bat">🔋 0/0</span>
+          <span class="chip" id="h-blk">🧩 0/0</span>
+          <span class="chip" id="h-stp">👣 0</span>
+          <span class="goal" id="h-goal"></span>
+        </div>
+        <div class="ctrl">
+          <button class="btn go run" id="b-run">▶ Chạy</button>
+          <button class="btn" id="b-step" title="Chạy từng bước (Space)">⏭<span class="tx"> Bước</span></button>
+          <button class="btn" id="b-reset" title="Đặt lại (R)">↺<span class="tx"> Đặt lại</span></button>
+          <button class="btn warn" id="b-hint" title="Gợi ý (H)">💡 Gợi ý</button>
+          <button class="btn" id="b-undo" title="Hoàn tác (Z)">↶<span class="tx"> Hoàn tác</span></button>
+          <span class="seg" id="speedSeg">
+            <button data-s="slow">🐢 Chậm</button><button data-s="normal">Vừa</button><button data-s="fast">🐇 Nhanh</button>
+          </span>
+        </div>
+      </div>
+      <div class="right">
+        <div class="tip" id="tip"><span id="tip-text"></span><button id="tip-x" aria-label="Đóng">✕</button></div>
+        <div class="panel">
+          <h4><span>KHỐI LỆNH · chạm hoặc kéo</span><span id="tools-info"></span></h4>
+          <div id="tools"></div>
+        </div>
+        <div id="prog"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TRÌNH SOẠN MÀN ============ -->
+  <section id="scr-editor" class="screen">
+    <header class="bar">
+      <button class="btn sm" id="ed-back">← Menu</button>
+      <div class="title"><b>Trình soạn màn</b><small>Vẽ bản đồ, thử chơi, chia sẻ bằng mã</small></div>
+      <span class="spacer"></span>
+      <button class="icon-btn snd-btn" title="Bật/tắt âm"></button>
+    </header>
+    <div class="play">
+      <div class="left"><div class="boardwrap" id="edWrap"><canvas id="edCanvas"></canvas></div></div>
+      <div class="right ed-panel">
+        <div class="panel"><h4><span>CÔNG CỤ VẼ</span><span>chạm / kéo trên bản đồ</span></h4><div class="ed-tools" id="ed-tools"></div></div>
+        <div class="panel">
+          <div class="row">Lưới: <select id="ed-w"></select> × <select id="ed-h"></select>
+            Hướng robot: <button class="btn sm" id="ed-dir">⬆</button>
+            Tối đa khối: <input type="number" id="ed-max" min="2" max="60"></div>
+          <div class="ed-allow" id="ed-allow"></div>
+          <div class="row"><button class="btn go" id="ed-test">▶ Thử chơi</button><button class="btn" id="ed-clear">🧹 Xóa hết</button></div>
+        </div>
+        <div class="panel"><h4><span>MÃ CHIA SẺ</span></h4>
+          <textarea id="ed-code" rows="3" placeholder="Dán mã màn vào đây rồi bấm Nạp mã…"></textarea>
+          <div class="row"><button class="btn sm" id="ed-export">📋 Tạo mã</button><button class="btn sm" id="ed-import">📥 Nạp mã</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="modal"></div>
+<div id="dropLine"></div>
+<div id="toast"></div>
+
+<script>
+//#ENGINE_START
+/* =====================================================================
+   1. CONFIG – mọi thông số dễ chỉnh nằm ở đây
+   ===================================================================== */
+const CONFIG = {
+  speed: { slow: 0.8, normal: 0.45, fast: 0.2 }, // giây cho mỗi bước (chậm / vừa / nhanh)
+  defaultSpeed: 'normal',
+  tickFactor: 0.3,          // thời gian sáng khối điều khiển (Lặp/Nếu/Hàm) so với 1 bước
+  maxHints: 3,              // số lần gợi ý tối đa mỗi màn
+  hintStarPenalty: 1,       // dùng gợi ý thì mất bấy nhiêu sao
+  maxSteps: 500,            // giới hạn tổng số bước robot (chống vòng lặp vô hạn)
+  maxTicks: 3000,           // giới hạn số khối được duyệt (chống treo trình duyệt)
+  maxDelta: 0.05,           // delta time tối đa (giây) để không "nhảy cóc" khi chuyển tab
+  repeatMin: 2, repeatMax: 9, repeatDefault: 3,
+  star: {                   // ngưỡng sao so với lời giải mẫu (par)
+    threeBlocksExtra: 0, threeStepsFactor: 1.3,
+    twoBlocksExtra: 3,   twoStepsFactor: 2.2
+  },
+  score: { perStar: 300, perSpareBlock: 20, perSpareStep: 2 },
+  unlockAll: false,         // đặt true để mở khóa mọi màn (kiểm thử)
+  blockColors: { move: '#b5e6a2', turn: '#d4bff5', action: '#ffd2a1', control: '#aed2fb' },
+  board: {
+    floorA: '#cdeee2', floorB: '#c3e8da', tray: '#a6e3cd', wallTop: '#9db5c0', wallSide: '#6f8a97',
+    battery: '#ffd23f', spike: '#ff5d7a', robot: '#4c8df6', eye: '#ff9a3c', exitOn: '#35c27e'
+  }
+};
+
+const BLOCKS = {
+  move:    { label: 'Tiến 1 ô',               group: 'move' },
+  left:    { label: 'Rẽ trái',                group: 'turn' },
+  right:   { label: 'Rẽ phải',                group: 'turn' },
+  collect: { label: 'Nhặt pin',               group: 'action' },
+  press:   { label: 'Bấm nút',                group: 'action' },
+  repeat:  { label: 'Lặp',                    group: 'control', container: true },
+  ifwall:  { label: 'Nếu trước mặt có tường', group: 'control', container: true },
+  call:    { label: 'Gọi hàm',                group: 'control' },
+  ifspike: { label: 'Nếu trước mặt có gai/hố', group: 'control', container: true },
+  untilwall: { label: 'Lặp đến khi trước mặt có tường', group: 'control', container: true },
+  ifbat:   { label: 'Nếu đang đứng trên pin', group: 'control', container: true }
+};
+const COND = { ifwall: 1, ifspike: 1, ifbat: 1 };   // khối rẽ nhánh (then / else)
+const DIRS = [{ dx: 0, dy: -1 }, { dx: 1, dy: 0 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }]; // 0=lên 1=phải 2=xuống 3=trái
+
+/* =====================================================================
+   2. DỮ LIỆU MÀN CHƠI (5 khu x 6 màn)
+   Ký hiệu bản đồ: . sàn  # tường  B pin  X cổng thoát  S gai điện
+   K nút bấm  D cửa khóa  ^ > v < băng chuyền  R robot xuất phát  r robot đứng trên pin
+   Lời giải mẫu (sol/fn): M tiến, L trái, R phải, C nhặt, P bấm, F gọi hàm,
+   "3( ... )" lặp 3 lần, "?( then | else )" nếu trước mặt có tường.
+   dir: 0 lên, 1 phải, 2 xuống, 3 trái. bat: danh sách pin phụ [[x,y]] (đặt pin lên ô đặc biệt).
+   ===================================================================== */
+const BASE = ['move', 'left', 'right', 'collect'];
+const ZONES = [
+  { name: 'Phòng khởi động',  desc: 'Tiến, rẽ, nhặt pin, né gai điện',  allow: BASE },
+  { name: 'Hành lang lặp',    desc: 'Mở khóa khối Lặp N lần',            allow: BASE.concat('repeat') },
+  { name: 'Trạm cảm biến',    desc: 'Mở khóa khối Nếu trước mặt có tường', allow: BASE.concat('repeat', 'ifwall') },
+  { name: 'Xưởng hàm',        desc: 'Mở khóa Hàm tự đặt tên',            allow: BASE.concat('repeat', 'ifwall', 'call') },
+  { name: 'Phòng điều khiển', desc: 'Mở khóa khối Bấm nút và cửa khóa',  allow: BASE.concat('repeat', 'ifwall', 'call', 'press') }
+];
+const A5 = BASE.concat('repeat', 'ifwall', 'call', 'press');
+ZONES.push(
+  { name: 'Radar gai',        desc: 'Khối mới: Nếu trước mặt có gai/hố',      allow: A5.concat('ifspike') },
+  { name: 'Bàn xoay',         desc: 'Ô mới: bàn xoay tự quay robot 90°',      allow: A5.concat('ifspike') },
+  { name: 'Cổng dịch chuyển', desc: 'Ô mới: cặp cổng dịch chuyển tức thời',   allow: A5.concat('ifspike') },
+  { name: 'Đi tới tường',     desc: 'Khối mới: Lặp đến khi trước mặt có tường', allow: A5.concat('ifspike', 'untilwall') },
+  { name: 'Kho hộp',          desc: 'Ô mới: hộp đẩy, lấp được gai điện',      allow: A5.concat('ifspike', 'untilwall') },
+  { name: 'Sàn nứt',          desc: 'Ô mới: sàn nứt chỉ đi được một lần',     allow: A5.concat('ifspike', 'untilwall') },
+  { name: 'Gai nhấp nháy',    desc: 'Ô mới: gai bật/tắt theo nhịp từng bước', allow: A5.concat('ifspike', 'untilwall') },
+  { name: 'Hồ băng',          desc: 'Ô mới: băng trơn khiến robot trượt',     allow: A5.concat('ifspike', 'untilwall') },
+  { name: 'Cảm biến pin',     desc: 'Khối mới: Nếu đang đứng trên pin',       allow: A5.concat('ifspike', 'untilwall', 'ifbat') },
+  { name: 'Đại sảnh tổng hợp', desc: 'Mọi cơ chế cùng xuất hiện',             allow: A5.concat('ifspike', 'untilwall', 'ifbat') }
+);
+const HOP = 'L M R M M C R M L';
+const LEVELS = [
+  // ---- Khu 1 ----
+  { z: 0, name: 'Bước đầu tiên', dir: 1, max: 8, allow: ['move', 'collect'],
+    intro: 'Kéo (hoặc chạm) khối "Tiến 1 ô" và "Nhặt pin" vào chương trình, rồi bấm Chạy!',
+    map: ['.....', '.....', 'R.B.X', '.....', '.....'], sol: 'M M C M M' },
+  { z: 0, name: 'Rẽ góc', dir: 0, max: 10,
+    intro: 'Khối rẽ đổi hướng robot. Đèn mắt cam cho biết robot đang nhìn về đâu.',
+    map: ['.....', 'B..X.', '.....', 'R....', '.....'], sol: 'M M C R M M M' },
+  { z: 0, name: 'Gai điện', dir: 1, max: 13,
+    intro: 'Gai điện màu hồng đỏ làm robot hỏng. Hãy đi vòng qua!',
+    map: ['.....', '.....', 'RSBX.', '.....', '.....'], sol: 'L M R M M R M C L M' },
+  { z: 0, name: 'Pin đôi', dir: 1, max: 14,
+    map: ['R.B..', '.#...', '.....', '..B.X', '.....'], sol: 'M M C R M M M C L M M' },
+  { z: 0, name: 'Băng chuyền', dir: 1, max: 10,
+    intro: 'Băng chuyền đẩy robot thêm 1 ô sau MỖI bước, theo hướng mũi tên.',
+    map: ['......', 'R.v...', '..v...', '..B.X.', '......', '......'], sol: 'M M R C L M M' },
+  { z: 0, name: 'Thử thách khu 1', dir: 0, max: 17,
+    map: ['B..B..', '.SSv#.', '.#.v#.', 'R....X', '...S..', '......'], sol: 'M M M C R M M M C R M L M M' },
+  // ---- Khu 2: Lặp ----
+  { z: 1, name: 'Lặp lại', dir: 1, max: 6,
+    intro: 'Khối Lặp chạy lại các khối bên trong. Bấm − / + trên khối để đổi số lần.',
+    map: ['........', '........', 'R......B', '.......X', '........'], sol: '7(M) C R M' },
+  { z: 1, name: 'Hình vuông', dir: 1, max: 9,
+    map: ['R...B', '.....', 'X.#..', '.....', 'B...B'], sol: '3(4(M) C R) M M' },
+  { z: 1, name: 'Cầu thang', dir: 1, max: 10,
+    map: ['.......', '.......', '....B.X', '...B...', '..B....', '.B....#', 'R..#.#.'], sol: '4(M L M C R) M M' },
+  { z: 1, name: 'Rắn săn pin', dir: 1, max: 17,
+    map: ['R.B.B.B', 'B.B.B..', '..B.B.B', 'B.B.B..', 'X......'],
+    sol: '2(3(M M C) R M R 3(M M C) L M L)' },
+  { z: 1, name: 'Quanh hồ', dir: 1, max: 12,
+    map: ['.S.S.S.', '.rX...B', '..####.', '..####.', '.B....B', '.S.S.S.'], sol: '2(5(M) C R 3(M) C R) M' },
+  { z: 1, name: 'Viền phòng thí nghiệm', dir: 1, max: 11,
+    map: ['rX.B...B', '.S....S.', '.#....#.', '.#.##.#B', 'B#.##.#.', '.#....#.', '.S....S.', 'B...B..B'],
+    sol: '4(3(M) C 4(M) C R) M' },
+  // ---- Khu 3: Nếu có tường ----
+  { z: 2, name: 'Cảm biến đầu tiên', dir: 1, max: 7,
+    intro: 'Khối "Nếu trước mặt có tường" chạy nhánh "thì" khi có tường, ngược lại chạy nhánh "không thì". Ngoài lưới cũng tính là tường!',
+    map: ['R...B', '.....', '....X', '.....', '.....'], sol: '7(?(R|M) C)' },
+  { z: 2, name: 'Vòng quanh phòng', dir: 1, max: 8,
+    map: ['R....B', '.S....', 'X.#...', '...#..', '....S.', '.....B'], sol: '3(7(?(R|M) C))' },
+  { z: 2, name: 'Xoắn ốc', dir: 1, max: 8,
+    map: ['R.....B', '######.', 'B...B#.', '.###.#.', '.#X.B#.', '.#####.', 'B.....B'], sol: '4(9(?(R|M) C))' },
+  { z: 2, name: 'Nhảy qua trụ', dir: 1, max: 14,
+    intro: 'Gặp trụ chắn thì đi vòng, còn không thì tiến. Một khối "Nếu" xử lý được mọi trụ!',
+    map: ['........', '........', '...B..B.', 'R.#..#.X', '........', '........'],
+    sol: '6(?(' + HOP + '|M))' },
+  { z: 2, name: 'Xoắn ốc ngược', dir: 1, max: 8, mirror: true,
+    map: ['R......B', '#######.', 'B....B#.', '.####.#.', '.#.X#.#.', '.#B..B#.', '.######.', 'B......B'],
+    sol: '6(8(?(L|M) C))' },
+  { z: 2, name: 'Vòng đầy pin', dir: 1, max: 8,
+    map: ['R..B...B', 'XS....S.', '.#....#.', '.#.##.#B', 'B#.##.#.', '.#....#.', '.S....S.', 'B...B..B'],
+    sol: '5(6(?(R|M) C))' },
+  // ---- Khu 4: Hàm ----
+  { z: 3, name: 'Hàm đầu tiên', dir: 1, max: 14,
+    intro: 'Soạn dãy lệnh "nhảy qua trụ" trong khung Hàm một lần, rồi dùng khối "Gọi hàm" nhiều lần. Bạn có thể đổi tên hàm!',
+    map: ['........', '........', '...B.B.B', 'R.#.#.#X', '........', '........'],
+    sol: 'M 3(F)', fn: HOP },
+  { z: 3, name: 'Hoa pin', dir: 0, max: 19,
+    map: ['S.......', '..B.S.B.', '.BRB.B.B', '..B.S.B.', '........', '......X.', '........', '.......S'],
+    sol: '4(F R) R 4(M) 4(F R) R 3(M)', fn: 'M C R R M' },
+  { z: 3, name: 'Hai làn trụ', dir: 1, max: 23,
+    map: ['....B...', 'R..#....', '........', 'X...#...', '...B....', '........'],
+    sol: '6(?(F|M)) R 2(M) R 6(?(F|M))', fn: HOP },
+  { z: 3, name: 'Hoa pin lớn', dir: 0, max: 25,
+    map: ['..B....S', '........', 'B.R.B...', '...S.B..', '..B.#.X.', '...B...B', '........', 'S....B..'],
+    sol: '4(F R) R 3(M) R 3(M) 4(F R) L M L M', fn: '2(M) C R R 2(M)' },
+  { z: 3, name: 'Cầu thang đôi', dir: 1, max: 12,
+    map: ['........', '........', '........', '...B....', '..B.B...', '.B...B..', 'R.....B.', '......XS'],
+    sol: '3(F) R 3(F) M', fn: 'M L M C R' },
+  { z: 3, name: 'Trạm băng chuyền', dir: 1, max: 17,
+    map: ['........', '........', '.S<<<<<.', '........', '..X.....', '........', 'R>>>>>S.', '........'],
+    bat: [[2, 6], [3, 6], [5, 2], [4, 2]],
+    sol: 'F R 2(M) L 3(M) L F M', fn: 'M C C L M' },
+  // ---- Khu 5: Bấm nút ----
+  { z: 4, name: 'Nút và cửa', dir: 1, max: 9,
+    intro: 'Đứng trên nút bấm rồi dùng khối "Bấm nút" để mở các cửa khóa màu vàng.',
+    map: ['.......', 'R.K.DBX', '.......', '.......', '.......'], sol: '2(M) P 3(M) C M' },
+  { z: 4, name: 'Bức tường có cửa', dir: 0, max: 14,
+    map: ['K..#..', '...#..', '...#..', 'R..DBX', '...#..', '...#..'], sol: '3(M) P R R 3(M) L 4(M) C M' },
+  { z: 4, name: 'Nút ở góc xa', dir: 1, max: 14,
+    map: ['R.....K', '.......', '###D###', '...B...', '...X...'], sol: '6(M) P R R 3(M) L 3(M) C M' },
+  { z: 4, name: 'Vòng quay có cửa', dir: 2, max: 9,
+    map: ['RX.D.B', '.S....', '..##..', '..##.K', '.S....', 'B....B'], sol: '3(8(?(L|M) C P))' },
+  { z: 4, name: 'Phòng chữ thập', dir: 0, max: 15, bat: [[1, 3]],
+    map: ['#######', '###B###', '###.###', '#K.RDBX', '###.###', '###B###', '#######'],
+    sol: '4(F R) R 3(M)', fn: '2(M) C P R R 2(M)' },
+  { z: 4, name: 'Phòng thí nghiệm', dir: 1, max: 9,
+    intro: 'Màn cuối! Kết hợp mọi thứ bạn đã học: băng chuyền, nút bấm, cửa khóa và cảm biến.',
+    map: ['R..>...B', '#######.', 'B....B#.', '.####.#.', '.#DX#.#.', '.#B..B#.', '.######.', 'K......B'],
+    sol: '6(8(?(R|M) C P))' }
+];
+
+/* =====================================================================
+   3. ENGINE – không đụng tới DOM (có thể kiểm thử bằng Node)
+   ===================================================================== */
+let _bid = 1;
+function newId() { return 'b' + (_bid++); }
+function mkBlock(t) {
+  const b = { id: newId(), t };
+  if (t === 'repeat') { b.n = CONFIG.repeatDefault; b.body = []; }
+  if (t === 'untilwall') b.body = [];
+  if (COND[t]) { b.then = []; b.else = []; }
+  return b;
+}
+const SOL_MAP = { M: 'move', L: 'left', R: 'right', C: 'collect', P: 'press', F: 'call' };
+
+/* Đọc chuỗi lời giải mẫu thành cây khối lệnh
+   Cú pháp: M L R C P F | 3( ... ) lặp | u( ... ) lặp đến khi có tường
+            ?( a | b ) nếu có tường | !( a | b ) nếu có gai/hố | %( a | b ) nếu đứng trên pin */
+const COND_CH = { '?': 'ifwall', '!': 'ifspike', '%': 'ifbat' };
+function parseSeq(s, c, stops) {
+  const list = [];
+  while (c.i < s.length) {
+    const ch = s[c.i];
+    if (ch === ' ') { c.i++; continue; }
+    if (stops.indexOf(ch) >= 0) break;
+    if (ch >= '0' && ch <= '9') {
+      let n = 0;
+      while (s[c.i] >= '0' && s[c.i] <= '9') { n = n * 10 + (+s[c.i]); c.i++; }
+      if (s[c.i] !== '(') throw new Error('Thiếu "(" sau số lặp: ' + s);
+      c.i++;
+      const b = mkBlock('repeat'); b.n = n; b.body = parseSeq(s, c, ')'); c.i++;
+      list.push(b); continue;
+    }
+    if (ch === 'u') {
+      c.i++; if (s[c.i] !== '(') throw new Error('Thiếu "(" sau u: ' + s);
+      c.i++; const b = mkBlock('untilwall'); b.body = parseSeq(s, c, ')'); c.i++; list.push(b); continue;
+    }
+    if (COND_CH[ch]) {
+      c.i++;
+      if (s[c.i] !== '(') throw new Error('Thiếu "(" sau ' + ch + ': ' + s);
+      c.i++;
+      const b = mkBlock(COND_CH[ch]); b.then = parseSeq(s, c, '|)');
+      if (s[c.i] === '|') { c.i++; b.else = parseSeq(s, c, ')'); }
+      c.i++; list.push(b); continue;
+    }
+    const t = SOL_MAP[ch];
+    if (!t) throw new Error('Ký tự lạ trong lời giải: ' + ch);
+    list.push(mkBlock(t)); c.i++;
+  }
+  return list;
+}
+function parseSolution(sol, fn) {
+  return { main: parseSeq(sol || '', { i: 0 }, ''), fn: parseSeq(fn || '', { i: 0 }, '') };
+}
+function countList(list) {
+  let n = 0;
+  for (const b of list) {
+    n++;
+    if (b.body) n += countList(b.body);
+    if (b.then) n += countList(b.then) + countList(b.else);
+  }
+  return n;
+}
+function countBlocks(prog) { return countList(prog.main) + countList(prog.fn); }
+
+/* Bản đồ -> trạng thái thế giới
+   Ký hiệu ô: . sàn  # tường  B pin  X cổng  S gai  K nút  D cửa  ^ > v < băng chuyền
+   O bàn xoay  1-4 cổng dịch chuyển (mỗi số 2 ô)  C hộp đẩy  F sàn nứt  H hố
+   P/Q gai nhấp nháy (P bật ở bước lẻ, Q bật ở bước chẵn)  I băng trơn  R/r robot */
+function parseMap(level) {
+  const rows = level.map, w = rows[0].length, h = rows.length, mir = !!level.mirror;
+  const tiles = [], bat = [], crates = [];
+  const start = { x: -1, y: -1, d: level.dir || 0 };
+  for (let y = 0; y < h; y++) {
+    const row = []; let src = rows[y];
+    if (mir) src = src.split('').reverse().join('');
+    for (let x = 0; x < w; x++) {
+      let ch = src[x];
+      if (mir) { if (ch === '>') ch = '<'; else if (ch === '<') ch = '>'; }
+      if (ch === 'R' || ch === 'r') { start.x = x; start.y = y; if (ch === 'r') bat.push(x + ',' + y); ch = '.'; }
+      else if (ch === 'B') { bat.push(x + ',' + y); ch = '.'; }
+      else if (ch === 'C') { crates.push(x + ',' + y); ch = '.'; }
+      row.push(ch);
+    }
+    tiles.push(row);
+  }
+  if (mir) start.d = start.d === 1 ? 3 : (start.d === 3 ? 1 : start.d);
+  (level.bat || []).forEach(p => bat.push((mir ? w - 1 - p[0] : p[0]) + ',' + p[1]));
+  return { w, h, tiles, bat, crates, start };
+}
+function newWorld(level) {
+  const p = parseMap(level), bat = new Set(p.bat), tele = {}, seen = {};
+  p.tiles.forEach((row, y) => row.forEach((c, x) => { if (c >= '1' && c <= '4') (seen[c] = seen[c] || []).push(x + ',' + y); }));
+  Object.keys(seen).forEach(c => { const a = seen[c]; if (a.length === 2) { tele[a[0]] = a[1]; tele[a[1]] = a[0]; } });
+  return { w: p.w, h: p.h, tiles: p.tiles, bat, total: bat.size, collected: 0, open: false, step: 0,
+           crates: new Set(p.crates), tele, r: { x: p.start.x, y: p.start.y, d: p.start.d } };
+}
+function cloneWorld(w) {
+  return { w: w.w, h: w.h, tiles: w.tiles.map(r => r.slice()), bat: new Set(w.bat), total: w.total, collected: w.collected,
+           open: w.open, step: w.step, crates: new Set(w.crates), tele: w.tele, r: { x: w.r.x, y: w.r.y, d: w.r.d } };
+}
+function inGrid(w, x, y) { return x >= 0 && y >= 0 && x < w.w && y < w.h; }
+function blockedCell(w, x, y) { const c = w.tiles[y][x]; return c === '#' || (c === 'D' && !w.open); }
+function walkable(w, x, y) { return inGrid(w, x, y) && !blockedCell(w, x, y) && !w.crates.has(x + ',' + y); }
+function isWallAhead(w) {
+  const d = DIRS[w.r.d], nx = w.r.x + d.dx, ny = w.r.y + d.dy;
+  return !inGrid(w, nx, ny) || blockedCell(w, nx, ny);
+}
+/* Ô (x,y) có nguy hiểm ở bước thứ k không? (k tính từ 1) */
+function hazardAt(w, x, y, k) {
+  const c = w.tiles[y][x];
+  if (c === 'S') return 'spike';
+  if (c === 'H') return 'hole';
+  if (c === 'P' && k % 2 === 1) return 'spike';
+  if (c === 'Q' && k % 2 === 0) return 'spike';
+  return null;
+}
+function leaveCell(w) { const r = w.r; if (w.tiles[r.y][r.x] === 'F') w.tiles[r.y][r.x] = 'H'; } // sàn nứt sập sau khi rời đi
+/* Xử lý ô robot vừa bước vào: nguy hiểm, trượt băng, bàn xoay, dịch chuyển. Trả về true nếu robot hỏng */
+function settle(w, out, k) {
+  const r = w.r;
+  for (let guard = 0; guard < 20; guard++) {
+    const hz = hazardAt(w, r.x, r.y, k);
+    if (hz) { out.dead = true; out.reason = hz; out.phases.push({ k: 'die', reason: hz }); return true; }
+    const c = w.tiles[r.y][r.x];
+    if (c === 'I') {
+      const d = DIRS[r.d], nx = r.x + d.dx, ny = r.y + d.dy;
+      if (!walkable(w, nx, ny)) return false;
+      out.phases.push({ k: 'slide', from: { x: r.x, y: r.y }, to: { x: nx, y: ny } });
+      leaveCell(w); r.x = nx; r.y = ny; continue;
+    }
+    if (c === 'O') { r.d = (r.d + 1) % 4; out.phases.push({ k: 'turn', delta: 1, pad: true }); return false; }
+    if (c >= '1' && c <= '4') {
+      const to = w.tele[r.x + ',' + r.y];
+      if (to) { const q = to.split(','); out.phases.push({ k: 'tele', from: { x: r.x, y: r.y }, to: { x: +q[0], y: +q[1] } }); leaveCell(w); r.x = +q[0]; r.y = +q[1]; }
+      return false;
+    }
+    return false;
+  }
+  return false;
+}
+
+/* Thực hiện 1 bước (khối lệnh cơ bản). Trả về danh sách "pha" để hoạt họa + kết quả */
+function stepWorld(w, type) {
+  const r = w.r, out = { phases: [], dead: false, reason: '', won: false }, k = ++w.step;
+  const kill = why => { out.dead = true; out.reason = why; out.phases.push({ k: 'die', reason: why }); return out; };
+  if (type === 'left' || type === 'right') {
+    r.d = (r.d + (type === 'left' ? 3 : 1)) % 4;
+    out.phases.push({ k: 'turn', delta: type === 'left' ? -1 : 1 });
+  } else if (type === 'collect') {
+    const key = r.x + ',' + r.y;
+    if (w.bat.has(key)) { w.bat.delete(key); w.collected++; out.phases.push({ k: 'collect', ok: true, x: r.x, y: r.y }); }
+    else out.phases.push({ k: 'collect', ok: false, x: r.x, y: r.y });
+  } else if (type === 'press') {
+    if (w.tiles[r.y][r.x] === 'K') { const first = !w.open; w.open = true; out.phases.push({ k: 'press', ok: true, first }); }
+    else out.phases.push({ k: 'press', ok: false });
+  } else if (type === 'move') {
+    const d = DIRS[r.d], nx = r.x + d.dx, ny = r.y + d.dy;
+    if (!inGrid(w, nx, ny)) {
+      out.phases.push({ k: 'move', from: { x: r.x, y: r.y }, to: { x: nx, y: ny } });
+      leaveCell(w); r.x = nx; r.y = ny; return kill('out');
+    }
+    let bump = blockedCell(w, nx, ny), crate = null;
+    if (!bump && w.crates.has(nx + ',' + ny)) {          // đẩy hộp
+      const cx = nx + d.dx, cy = ny + d.dy, ck = cx + ',' + cy;
+      if (!inGrid(w, cx, cy) || w.crates.has(ck) || '.KS'.indexOf(w.tiles[cy][cx]) < 0) bump = true;
+      else {
+        w.crates.delete(nx + ',' + ny); crate = { from: { x: nx, y: ny }, to: { x: cx, y: cy }, vanish: false };
+        if (w.tiles[cy][cx] === 'S') { w.tiles[cy][cx] = '.'; crate.vanish = true; } else w.crates.add(ck);
+      }
+    }
+    if (bump) out.phases.push({ k: 'bump', dx: d.dx, dy: d.dy });
+    else {
+      out.phases.push({ k: 'move', from: { x: r.x, y: r.y }, to: { x: nx, y: ny }, crate });
+      leaveCell(w); r.x = nx; r.y = ny;
+      if (settle(w, out, k)) return out;
+    }
+  }
+  // băng chuyền đẩy robot 1 ô sau mỗi bước
+  const bd = '^>v<'.indexOf(w.tiles[r.y][r.x]);
+  if (bd >= 0) {
+    const d = DIRS[bd], nx = r.x + d.dx, ny = r.y + d.dy;
+    if (!inGrid(w, nx, ny)) {
+      out.phases.push({ k: 'push', from: { x: r.x, y: r.y }, to: { x: nx, y: ny } });
+      r.x = nx; r.y = ny; return kill('out');
+    }
+    if (!blockedCell(w, nx, ny) && !w.crates.has(nx + ',' + ny)) {
+      out.phases.push({ k: 'push', from: { x: r.x, y: r.y }, to: { x: nx, y: ny } });
+      leaveCell(w); r.x = nx; r.y = ny;
+      const hz = hazardAt(w, nx, ny, k); if (hz) return kill(hz);
+    }
+  }
+  const hz = hazardAt(w, r.x, r.y, k);                  // gai nhấp nháy bật lên khi robot đang đứng
+  if (hz) return kill(hz);
+  if (w.tiles[r.y][r.x] === 'X' && w.collected === w.total) out.won = true;
+  return out;
+}
+
+/* Điều kiện của các khối rẽ nhánh */
+function condTrue(w, t) {
+  if (t === 'ifwall') return isWallAhead(w);
+  if (t === 'ifbat') return w.bat.has(w.r.x + ',' + w.r.y);
+  if (t === 'ifspike') {
+    const d = DIRS[w.r.d], nx = w.r.x + d.dx, ny = w.r.y + d.dy;
+    return inGrid(w, nx, ny) && !!hazardAt(w, nx, ny, w.step + 1);
+  }
+  return false;
+}
+
+/* Trình thông dịch bằng generator: mỗi lần yield là 1 khối được thực thi */
+function* runProgram(prog, ctx) { yield* execList(prog.main, prog, ctx, 0); }
+function* execList(list, prog, ctx, depth) { for (const b of list) yield* execBlock(b, prog, ctx, depth); }
+function* execBlock(b, prog, ctx, depth) {
+  if (++ctx.ticks > CONFIG.maxTicks) throw new Error('ticks');
+  if (b.t === 'repeat') {
+    yield { kind: 'tick', block: b };
+    for (let i = 0; i < b.n; i++) yield* execList(b.body, prog, ctx, depth);
+  } else if (b.t === 'untilwall') {
+    for (;;) {
+      yield { kind: 'tick', block: b };
+      if (isWallAhead(ctx.world)) break;
+      if (++ctx.ticks > CONFIG.maxTicks) throw new Error('ticks');
+      yield* execList(b.body, prog, ctx, depth);
+    }
+  } else if (COND[b.t]) {
+    yield { kind: 'tick', block: b };
+    yield* execList(condTrue(ctx.world, b.t) ? b.then : b.else, prog, ctx, depth);
+  } else if (b.t === 'call') {
+    yield { kind: 'tick', block: b };
+    if (depth < 1) yield* execList(prog.fn, prog, ctx, depth + 1); // hàm không được tự gọi lại
+  } else {
+    yield { kind: 'act', block: b };
+  }
+}
+
+/* Chạy nhanh không hoạt họa (dùng để tính par và kiểm thử lời giải) */
+function simulate(level, prog) {
+  const w = newWorld(level), ctx = { world: w, ticks: 0 }, gen = runProgram(prog, ctx);
+  const res = { won: false, dead: false, steps: 0, reason: 'incomplete' };
+  for (;;) {
+    let r;
+    try { r = gen.next(); } catch (e) { res.reason = 'ticks'; break; }
+    if (r.done) break;
+    if (r.value.kind !== 'act') continue;
+    if (++res.steps > CONFIG.maxSteps) { res.reason = 'maxsteps'; break; }
+    const o = stepWorld(w, r.value.block.t);
+    if (o.dead) { res.dead = true; res.reason = o.reason; break; }
+    if (o.won) { res.won = true; res.reason = 'won'; break; }
+  }
+  res.collected = w.collected; res.total = w.total;
+  return res;
+}
+
+/* Sao & điểm */
+function evaluate(level, blocks, steps, hints) {
+  const par = level.par, S = CONFIG.star;
+  let stars = 1;
+  if (blocks <= par.blocks + S.threeBlocksExtra && steps <= Math.ceil(par.steps * S.threeStepsFactor)) stars = 3;
+  else if (blocks <= par.blocks + S.twoBlocksExtra && steps <= Math.ceil(par.steps * S.twoStepsFactor)) stars = 2;
+  if (hints > 0) stars = Math.max(1, stars - CONFIG.hintStarPenalty);
+  const sc = CONFIG.score;
+  const score = stars * sc.perStar + Math.max(0, level.max - blocks) * sc.perSpareBlock +
+                Math.max(0, par.steps * 2 - steps) * sc.perSpareStep;
+  return { stars, score, blocks, steps };
+}
+
+/* Gợi ý: so chương trình của người chơi với lời giải mẫu (duyệt tiền thứ tự) */
+function flattenTokens(prog) {
+  const out = [];
+  const walk = (list, sec, depth, branch) => list.forEach(b => {
+    out.push({ key: sec + depth + branch + b.t + (b.t === 'repeat' ? b.n : ''), t: b.t, n: b.n, sec, depth, branch });
+    if (b.body) walk(b.body, sec, depth + 1, 'body');
+    if (b.then) { walk(b.then, sec, depth + 1, 'then'); walk(b.else, sec, depth + 1, 'else'); }
+  });
+  walk(prog.main, 'm', 0, ''); walk(prog.fn, 'f', 0, '');
+  return out;
+}
+function computeHint(sol, prog) {
+  const a = flattenTokens(sol), b = flattenTokens(prog);
+  let i = 0;
+  while (i < a.length && i < b.length && a[i].key === b[i].key) i++;
+  if (i < a.length) return { type: i < b.length ? 'fix' : 'next', want: a[i], have: b[i], idx: i };
+  if (b.length > a.length) return { type: 'extra', idx: i };
+  return { type: 'done' };
+}
+
+//#ENGINE_END
+//#EXTRA_START
+/* Màn 31–90 (10 vùng mới x 6 màn). Sinh bằng công cụ dò đường BFS rồi kiểm chứng lại bằng engine. */
+const EXTRA_LEVELS = [
+  { z: 5, name: "Radar đầu tiên", dir: 1, max: 13, intro: "Khối mới «Nếu trước mặt có gai/hố» chạy nhánh \"thì\" khi ô phía trước nguy hiểm. Dùng nó để vòng qua gai mà không cần biết gai nằm ở đâu!",
+    map: ["........","........","R.S.S..X","........","........"],
+    sol: "9(!(L M R M M R M L|M))" },
+  { z: 5, name: "Gai và pin", dir: 1, max: 14,
+    map: ["........","........","RBS.SB.X","........","........"],
+    sol: "9(!(L M R M M R M L|M) C)" },
+  { z: 5, name: "Hành lang gai", dir: 2, max: 14,
+    map: ["..R..",".....","..S..","..B..",".....","..S..","..B..","..X.."],
+    sol: "9(!(L M R M M R M L|M) C)" },
+  { z: 5, name: "Rẽ rồi vòng gai", dir: 1, max: 15,
+    map: ["R.S.S..",".......",".......","......S",".......","......S","......X"],
+    sol: "12(!(R M L M M L M R|?(R|M)))" },
+  { z: 5, name: "Vành đai điện", dir: 1, max: 17,
+    map: ["R..S.B..","X.......",".......S","S.......",".......B","..B.S..."],
+    sol: "3(8(!(R M L M M L M R|?(R|M)) C))" },
+  { z: 5, name: "Vành đai lớn", dir: 1, max: 17,
+    map: ["R..S..B.","X.......","B.......","...##..S","S..##...",".......B","........","..B..S.."],
+    sol: "4(8(!(R M L M M L M R|?(R|M)) C))" },
+  { z: 6, name: "Bàn xoay đầu tiên", dir: 2, max: 12, intro: "Bàn xoay tự quay robot 90° sang phải ngay khi robot bước lên. Hãy tận dụng nó để đổi hướng!",
+    map: [".O....",".OO...",".....X","..#.#O","OR..OB"],
+    sol: "L M M 2(M L) C M L M" },
+  { z: 6, name: "Quay vòng vòng", dir: 3, max: 13,
+    map: [".....O.",".X#O..O",".....#.","..#...R",".BB.O.."],
+    sol: "M M L 3(M) C M R C 3(M)" },
+  { z: 6, name: "Xoay đúng lúc", dir: 2, max: 15,
+    map: ["#OO...","#..##.",".....O",".#.#RB","..S..O","......","X.S..."],
+    sol: "L M R C 3(M) L M R 3(M) L M" },
+  { z: 6, name: "Mê cung xoay", dir: 3, max: 16,
+    map: ["....BX.","....#.#","..O#.O.",".##.S..","BO....O","..#R..O"],
+    sol: "R 2(M L M) R C 4(M) R 4(M) C M" },
+  { z: 6, name: "Chuyển hướng liên hoàn", dir: 3, max: 21,
+    map: [".#...","O...S","OB#..","...OR","XB.BS"],
+    sol: "M L L M R C M M R M M L L C M M R C M" },
+  { z: 6, name: "Công viên xoay", dir: 3, max: 21,
+    map: ["..OB..","B.O...",".BO#.R","......","O...#.","OX#...","....S."],
+    sol: "M R M M L M C 2(M L M) L C M R M C 3(M)" },
+  { z: 7, name: "Cổng kỳ lạ", dir: 3, max: 11, intro: "Hai cổng dịch chuyển cùng số sẽ đưa robot tới nhau ngay lập tức. Robot giữ nguyên hướng nhìn sau khi dịch chuyển.",
+    map: [".#.#...R","#......1","########","...#....","..X..2..","...B....","....1...","....S..2"],
+    sol: "L M 2(R M) C M L M" },
+  { z: 7, name: "Qua bên kia", dir: 1, max: 14,
+    map: ["...S.1B.","R.BS..X.","...S.#..",".1.S.#..","...S..S.","...S...."],
+    sol: "M M L L C 2(M L M) R C M" },
+  { z: 7, name: "Hai bờ", dir: 0, max: 14,
+    map: [".....#.B","#....#..","BR...#1.",".....#.X",".1##.#..",".....#.."],
+    sol: "L M L C 3(M M L) L C 3(M)" },
+  { z: 7, name: "Nhảy cóc không gian", dir: 3, max: 17,
+    map: [".1#...","..#...","..#...","..#...","R.#...","B.#...","..#X.S","#.#1B."],
+    sol: "L M L L C 5(M) R M M L C M L M" },
+  { z: 7, name: "Đường tắt bí mật", dir: 2, max: 20,
+    map: ["...S..",".1#S.#","..RSB.","...S..","...SX1","B..S.."],
+    sol: "3(M) R M M L L C M L 5(M) 2(M L) C M M" },
+  { z: 7, name: "Trạm dịch chuyển", dir: 1, max: 21,
+    map: ["..#1.#",".1#...","..#.#X",".R#.B.","..#B..",".B#..S"],
+    sol: "R M M L L C 2(4(M) L L) C M R M C M L M" },
+  { z: 8, name: "Tới tận tường", dir: 1, max: 5, intro: "Khối mới «Lặp đến khi trước mặt có tường» lặp lại cho tới khi robot bị chặn – không cần đếm số ô!",
+    map: ["........","........","R...B..X","........","........"],
+    sol: "u(M C)" },
+  { z: 8, name: "Ngoằn ngoèo", dir: 1, max: 17,
+    map: ["R.......","#######.","...B....",".#######",".......X"],
+    sol: "u(M) R 2(M) R u(M C) L 2(M) L u(M)" },
+  { z: 8, name: "Xoắn ốc nhỏ", dir: 1, max: 7,
+    map: ["R....B","#####.","B..B#.",".#XB#.",".####.","B....B"],
+    sol: "7(u(M C) R)" },
+  { z: 8, name: "Xoắn ốc lớn", dir: 1, max: 7,
+    map: ["R......B","#######.","B....B#.",".####.#.",".#BX#.#.",".#B..B#.",".######.","B......B"],
+    sol: "9(u(M C) R)" },
+  { z: 8, name: "Bốn hành lang", dir: 1, max: 21,
+    map: ["R...B...","#######.","......B.",".#######",".B...B..","#######.","X......."],
+    sol: "F R 2(M) R F L 2(M) L F R 2(M) R F", fn: "u(M C)" },
+  { z: 8, name: "Vành đai gai", dir: 1, max: 16,
+    map: ["R..S.B..","X.......",".......S","S.......",".......B","..B.S..."],
+    sol: "4(u(!(R M L M M L M R|M) C) R)" },
+  { z: 9, name: "Hộp đầu tiên", dir: 2, max: 11, intro: "Hộp gỗ đẩy được bằng cách đi vào nó. Đẩy hộp vào gai điện sẽ lấp gai và hộp biến mất. Hộp không đẩy được vào tường hay hộp khác.",
+    map: ["....#..",".R.....","...CC..","#......","SSSSSSS",".......","...XB..","......."],
+    sol: "L 3(M) R 5(M) R C M" },
+  { z: 9, name: "Lấp gai", dir: 2, max: 14,
+    map: ["......","...BR.","#..C..","SSSSSS",".###..","S...X."],
+    sol: "R M M 3(L M) R C M R 4(M)" },
+  { z: 9, name: "Đẩy cho khéo", dir: 3, max: 17,
+    map: ["....S...","..C.S.#.","...RS...","..#BS..X","#.#.S...","..CCS..#","....S..."],
+    sol: "L M C M M R M L 2(M L 3(M)) R M" },
+  { z: 9, name: "Kho chật chội", dir: 1, max: 17,
+    map: ["..#...",".C..RB","SSSSSS","......",".S.#..","..X#.."],
+    sol: "M L L C 4(M) R 2(M L) 5(M) L M M" },
+  { z: 9, name: "Kho hai hộp", dir: 1, max: 21,
+    map: ["......","..B..S",".R.CC.","SSSSSS","#.....",".B.XB."],
+    sol: "M L M R C M M R 4(M) R C 3(M) L L C M M" },
+  { z: 9, name: "Kho hàng lớn", dir: 3, max: 25,
+    map: [".B...S..","B.C..S.X",".S..RSB.","....#S..","...#.S.."],
+    sol: "M M R M L M M R C M R M C 5(M) R M M L C M L M" },
+  { z: 10, name: "Bước chân nhẹ", dir: 2, max: 18, intro: "Sàn nứt chỉ đi được một lần: robot rời đi là ô đó sập thành hố, rơi xuống là hỏng!",
+    map: ["..FFFF.","..FBFFR","#SF#FF.",".XFFBF.",".......","......."],
+    sol: "2(M M R) C M M L M C M L M M R M" },
+  { z: 10, name: "Sàn giòn", dir: 3, max: 19,
+    map: ["......","......","FFFFF#","BBFFF.","FFFFFR","#.....","X....."],
+    sol: "3(M) R M L M M L L C M R C 3(M) R M" },
+  { z: 10, name: "Đi một lần", dir: 1, max: 19,
+    map: ["BFF..","FFFR#","BFB..","..#..","....#",".....",".X..."],
+    sol: "R 2(M R) C 2(M M L) C M M C 4(M) L M" },
+  { z: 10, name: "Đường mòn mong manh", dir: 3, max: 20,
+    map: [".......",".......",".....#.","#X....B","BFF....","FFF.##R","......."],
+    sol: "R M M L C 4(M) L M 2(M R M) R C M L M" },
+  { z: 10, name: "Mê cung nứt", dir: 0, max: 24,
+    map: ["....X..",".FFB.#.",".BFFB#.",".FFB...","R..#...","......."],
+    sol: "M M R M L C M R M M R C M M L C M L M C M M" },
+  { z: 10, name: "Cầu thang vỡ", dir: 0, max: 23,
+    map: [".S...R","..FFBF","X.BF#B",".BFFFF","..FFF#"],
+    sol: "L 2(M L) 2(C M R M) 3(M) R C M R M L L C M M" },
+  { z: 11, name: "Nhịp đầu tiên", dir: 1, max: 13, intro: "Gai nhấp nháy bật/tắt theo từng hành động của robot (kể cả khi chỉ rẽ). Ô gai đỏ đang bật, ô gai mờ đang tắt; hai kiểu gai luân phiên nhau. Hãy canh nhịp!",
+    map: ["......#","R......","PPQPPPP","..B....","....X#.",".#....."],
+    sol: "R M M L M M C M M R M" },
+  { z: 11, name: "Chờ đúng lúc", dir: 0, max: 16,
+    map: ["R......",".......","PPQQQQQ","..B....","PQPPPPQ","..#.X..",".#.....","......."],
+    sol: "L L 3(M) L M M C M R M M L M" },
+  { z: 11, name: "Gai nhịp đôi", dir: 3, max: 15,
+    map: [".....BB.",".S.#.R#.","PQPPQPPQ","..X.....","........"],
+    sol: "2(R M) L 2(L C M) M M R 3(M)" },
+  { z: 11, name: "Hàng rào nhấp nháy", dir: 1, max: 17,
+    map: ["..Q...","B.P#S.","..Q...","..P...","..Q.X.","..Q.#.",".RP..."],
+    sol: "L 4(M) 2(M L) C M 2(3(M) L) M R M" },
+  { z: 11, name: "Nhịp điệu điện", dir: 0, max: 20,
+    map: ["B..Q.X","...P..","...Q..","#..Q..","...Q..","BR.P.."],
+    sol: "L M R C M M R M L 3(M) 2(M L) L C 5(M)" },
+  { z: 11, name: "Dàn nhạc gai", dir: 2, max: 23,
+    map: [".BP.Q..","..Q.Q.S","..P.P..","..P.P..","R.P.P.#","..Q.P.X","B.Q.P.."],
+    sol: "M M L L C 5(M) 2(M R) C 3(M) L 4(M) R M M L M" },
+  { z: 12, name: "Trượt nhẹ", dir: 3, max: 9, intro: "Trên băng trơn, robot trượt thẳng cho tới khi gặp vật cản. Gai hoặc hố trên đường trượt sẽ làm robot hỏng!",
+    map: ["........","..S.....","..R.....",".#B.....",".S..SI..",".#.I.I#.","...I.I.X","...IIII."],
+    sol: "L M C 3(M) L 3(M)" },
+  { z: 12, name: "Sân băng", dir: 3, max: 12,
+    map: ["..S..S.","I.#....","I..I.BR","IX#I.BI","I.##II."],
+    sol: "2(M L) 2(L C M) M M L M" },
+  { z: 12, name: "Không phanh", dir: 3, max: 12,
+    map: ["...I....","I..I...B","I.....R.","I......S","I.......","I..#...I","....#..I","..X#S..I"],
+    sol: "L L 2(M L) C 4(M) L 6(M)" },
+  { z: 12, name: "Hồ băng dài", dir: 3, max: 15,
+    map: [".X......","......#B","..#.IIII",".#.S....","..#.....",".III..#.",".#......","S..RI.#."],
+    sol: "R M M R 4(M) L M M C M L 6(M)" },
+  { z: 12, name: "Trượt rồi rẽ", dir: 0, max: 17,
+    map: ["...#.BB","##...B.","....R#.",".......",".....#I","X..IS..",".III..."],
+    sol: "M R M L C M 2(R C M) M 2(3(M) R) M" },
+  { z: 12, name: "Cực băng", dir: 2, max: 23,
+    map: [".......X","...S.B.#","...III#I","B.III#.#","..B.....","..II#...","R..S...."],
+    sol: "L M 2(M L) C M M R M C M R 3(M) L M C M R M M" },
+  { z: 13, name: "Có pin không?", dir: 1, max: 6, intro: "Khối mới «Nếu đang đứng trên pin» giúp robot chỉ nhặt khi có pin – rất hợp để quét một hàng pin rải rác.",
+    map: ["........","........","RB.BB.BX","........","........"],
+    sol: "7(%(C|) M)" },
+  { z: 13, name: "Hai hàng", dir: 1, max: 15,
+    map: ["......","RB.B.B","X.B...","......"],
+    sol: "5(%(C|) M) %(C|) R M R 5(%(C|) M)" },
+  { z: 13, name: "Ba hàng", dir: 1, max: 24,
+    map: ["R.B..B.",".B.B..B","....B.X"],
+    sol: "6(%(C|) M) %(C|) R M R 6(%(C|) M) %(C|) L M L 6(%(C|) M)" },
+  { z: 13, name: "Hàm quét pin", dir: 1, max: 18,
+    map: ["RB..B..","..B...B","B....B.","...B..B",".B....X"],
+    sol: "2(F R M R F L M L) F", fn: "u(%(C|) M) %(C|)" },
+  { z: 13, name: "Quét giữa gai", dir: 1, max: 15,
+    map: ["........","RBSB.SBX","........"],
+    sol: "9(%(C|) !(L M R M M R M L|M))" },
+  { z: 13, name: "Quét vành đai", dir: 1, max: 17,
+    map: ["R.BS.B..","X......B",".......S","S.......","B......B","..B.S.B."],
+    sol: "4(u(%(C|) !(R M L M M L M R|M)) R)" },
+  { z: 14, name: "Sảnh khởi động", dir: 3, max: 13, intro: "Đại sảnh cuối cùng: mọi cơ chế đã học xuất hiện cùng lúc. Chúc may mắn!",
+    map: ["...OF.X","...BO..",".#.S..C","#..F...","...##..","F.B.R..",".O.F#C."],
+    sol: "M M R C 4(M) R M L C 4(M)" },
+  { z: 14, name: "Trộn lẫn", dir: 0, max: 17,
+    map: [".DF..I.","X.B.#..","...I.FI","BFS#I.1","1.#.F.#",".FF.R.I","..S.SFK"],
+    sol: "M M L M R M L C 2(M M L) L C M M" },
+  { z: 14, name: "Dòng chảy kỳ lạ", dir: 0, max: 17,
+    map: ["..1.#..#","XB1.#...","..I.#S..","....I.R.",".#..S...","...CS...","BII....."],
+    sol: "2(L 3(M)) R M R C 5(M) R M L L C M" },
+  { z: 14, name: "Phòng thử nghiệm B", dir: 1, max: 21,
+    map: [".B.S.B..","#ROC.P.S","........",".K.OD.OX","......#Q","#....Q..","..#P#..C","......S#"],
+    sol: "L M L L C 2(M M L M M) R C M R 3(M) L L M" },
+  { z: 14, name: "Thử thách lớn", dir: 0, max: 24,
+    map: ["X.B.#.C",".S.O.C#","B...Q.O","#.Q.R..","..B..B.","O...OS#"],
+    sol: "R 2(M R) C 3(M) C M R M 2(M L) L C 2(M M L) C M M" },
+  { z: 14, name: "Đại sảnh cuối cùng", dir: 0, max: 28,
+    map: ["..F.....","..F.R..F","..B...QP",".BS#BF.1","##.1#...",".F..F...","X..#...F"],
+    sol: "L M 2(M M L) L C M R M C M M R M L C M M 2(M R) 3(M) L M" }
+];
+LEVELS.push(...EXTRA_LEVELS);
+//#EXTRA_END
+//#FINAL_START
+/* Hoàn thiện dữ liệu màn: id, kích thước, lời giải đã phân tích, par */
+function finalizeLevels() {
+LEVELS.forEach((lv, i) => {
+  lv.id = i + 1; lv.h = lv.map.length; lv.w = lv.map[0].length;
+  lv.allow = lv.allow || ZONES[lv.z].allow;
+  lv.solProg = parseSolution(lv.sol, lv.fn);
+  const r = simulate(lv, lv.solProg);
+  lv.par = { blocks: countBlocks(lv.solProg), steps: r.steps, ok: r.won };
+});
+}
+finalizeLevels();
+//#FINAL_END
+/* =====================================================================
+   3b. ĐA NGÔN NGỮ (Tiếng Việt / English)
+   - Khóa của từ điển chính là câu tiếng Việt gốc; {0} {1}… là chỗ chèn giá trị.
+   - T(khóa, ...giá trị): trả về chuỗi theo ngôn ngữ hiện tại.
+   ===================================================================== */
+let LANG = 'vi';
+const EN = {
+  /* ---- Khối lệnh ---- */
+  'Tiến 1 ô': 'Move 1 tile', 'Rẽ trái': 'Turn left', 'Rẽ phải': 'Turn right', 'Nhặt pin': 'Collect battery', 'Bấm nút': 'Press button',
+  'Lặp': 'Repeat', 'Nếu trước mặt có tường': 'If wall ahead', 'Gọi hàm': 'Call function', 'Nếu trước mặt có gai/hố': 'If spike/hole ahead',
+  'Lặp đến khi trước mặt có tường': 'Repeat until wall ahead', 'Nếu đang đứng trên pin': 'If standing on battery',
+  'Lặp N lần': 'Repeat N times', 'Lặp {0} lần': 'Repeat {0} times', 'Gọi {0}': 'Call {0}', 'Hàm': 'Function', 'Hàm A': 'Function A',
+  'lần': 'times', 'thì': 'then', 'không thì': 'else', 'Giảm': 'Decrease', 'Tăng': 'Increase', 'Tên hàm': 'Function name',
+  'ƒ Hàm:': 'ƒ Function:', 'Chương trình chính': 'Main program', '{0} khối': '{0} blocks',
+  '＋ thêm vào đây': '＋ add here', 'Chạm hoặc kéo khối vào đây': 'Tap or drag a block here',
+  'thêm {0}': 'adding {0}', 'vào hàm': 'into the function', 'vào chương trình chính': 'into the main program',
+  'vào trong khối {0}': 'inside the {0} block', 'vào nhánh "thì"': 'into the "then" branch', 'vào nhánh "không thì"': 'into the "else" branch',
+  'vào cuối chương trình chính': 'at the end of the main program', 'vào trong khối «{0}»': 'inside the “{0}” block',
+  ' (nhánh thì)': ' (then branch)', ' (nhánh không thì)': ' (else branch)',
+  /* ---- HUD / điều khiển ---- */
+  '▶ Chạy': '▶ Run', '▶ Chạy lại': '▶ Run again', '▶ Chạy tiếp': '▶ Continue', '⏹ Dừng': '⏹ Stop',
+  '💡 Gợi ý ({0})': '💡 Hint ({0})', 'Mục tiêu 3★: ≤{0} khối · ≤{1} bước': '3★ goal: ≤{0} blocks · ≤{1} steps', 'Màn tự tạo': 'Custom level',
+  'Màn {0} · {1}': 'Level {0} · {1}', '{0} · lưới {1}×{2}': '{0} · grid {1}×{2}', 'Khu {0} · {1}': 'Zone {0} · {1}', 'Điểm: {0}': 'Score: {0}',
+  '🔓 đã mở khóa tất cả': '🔓 all unlocked',
+  /* ---- Thông báo ---- */
+  'Đang chạy – bấm Dừng hoặc Đặt lại để chỉnh sửa': 'Running – press Stop or Reset to edit', 'Đang chạy – bấm Dừng để chỉnh sửa': 'Running – press Stop to edit',
+  'Đã hết khối! Tối đa {0} khối': 'Out of blocks! Maximum {0} blocks', 'Hàm không được tự gọi lại chính nó': 'A function cannot call itself',
+  'Không còn gì để hoàn tác': 'Nothing to undo', 'Hãy thêm khối lệnh vào chương trình trước!': 'Add some blocks to the program first!',
+  'Hãy bấm Dừng trước khi xin gợi ý': 'Press Stop before asking for a hint', 'Đã hết lượt gợi ý!': 'No hints left!',
+  'Chương trình của bạn đã khớp lời giải mẫu – bấm Chạy nào!': 'Your program matches the sample solution – hit Run!',
+  '💡 Thêm khối «{0}» {1}. (Ô nét đứt cho biết vị trí)': '💡 Add the “{0}” block {1}. (The dashed slot shows where)',
+  '💡 Khối thứ {0} (viền đỏ) chưa đúng – ở vị trí đó cần «{1}».': '💡 Block #{0} (red outline) is wrong – that spot needs “{1}”.',
+  '💡 Chương trình có khối thừa (viền đỏ) – hãy xóa bớt.': '💡 The program has an extra block (red outline) – remove it.',
+  'Chương trình quá dài hoặc lặp vô hạn!': 'The program is too long or loops forever!',
+  'Vòng lặp rỗng – không có hành động nào!': 'Empty loop – no action inside!',
+  'Robot đã đi quá {0} bước – hãy kiểm tra vòng lặp!': 'The robot took more than {0} steps – check your loops!',
+  'Robot đã tới cổng nhưng còn thiếu pin ({0}/{1}).': 'The robot reached the exit but batteries are missing ({0}/{1}).',
+  'Chương trình đã chạy xong nhưng còn thiếu pin ({0}/{1}) – nhớ dùng khối «Nhặt pin».': 'The program finished but batteries are missing ({0}/{1}) – remember the “Collect battery” block.',
+  'Chương trình đã chạy xong nhưng robot chưa tới cổng thoát.': 'The program finished but the robot has not reached the exit.',
+  /* ---- Hộp thoại ---- */
+  '💥 Robot hỏng rồi!': '💥 The robot broke!', 'Robot chạm vào gai điện.': 'The robot touched an electric spike.', 'Robot rơi xuống hố.': 'The robot fell into a hole.',
+  'Robot đi ra khỏi lưới.': 'The robot left the grid.', 'Đừng nản – thử lại ngay nhé!': "Don't give up – try again!",
+  '↺ Chơi lại': '↺ Play again', 'Về trình soạn': 'Back to editor', 'Bản đồ': 'Map',
+  'Hoàn thành màn tự tạo!': 'Custom level complete!', 'Hoàn thành màn {0}!': 'Level {0} complete!', 'KỶ LỤC MỚI!': 'NEW RECORD!',
+  'Khối đã dùng': 'Blocks used', 'Số bước': 'Steps', 'Sao': 'Stars', 'Điểm': 'Score',
+  'Đã dùng gợi ý nên bị trừ 1 sao.': 'You used a hint, so 1 star was deducted.',
+  'Thử lại với ≤{0} khối và ≤{1} bước để đạt 3★.': 'Try again with ≤{0} blocks and ≤{1} steps to get 3★.',
+  '🏆 Bạn đã hoàn thành cả {0} màn!': '🏆 You have completed all {0} levels!', 'Màn tiếp theo ▶': 'Next level ▶',
+  '⏸ Tạm dừng': '⏸ Paused', 'Nghỉ một chút nhé. Nhấn <kbd>P</kbd> để tiếp tục.': 'Take a breather. Press <kbd>P</kbd> to resume.',
+  '▶ Tiếp tục': '▶ Resume', '↺ Đặt lại': '↺ Reset', '🗺 Thoát': '🗺 Quit',
+  '⚙ Cài đặt': '⚙ Settings', '🌐 Ngôn ngữ': '🌐 Language', '🔊 Âm thanh': '🔊 Sound', '🔉 Âm lượng': '🔉 Volume', 'Âm lượng': 'Volume', 'Âm thanh': 'Sound',
+  '🔓 Mở khóa tất cả các màn': '🔓 Unlock all levels', 'Mở khóa tất cả các màn': 'Unlock all levels',
+  'Chơi màn nào cũng được, không cần qua màn trước': 'Play any level, no need to clear the previous one',
+  '⏱ Tốc độ chạy mặc định': '⏱ Default run speed', '🐢 Chậm': '🐢 Slow', 'Vừa': 'Normal', '🐇 Nhanh': '🐇 Fast',
+  '🗑 Xóa tiến độ': '🗑 Reset progress', 'Xong': 'Done', '⚠ Bấm lần nữa để xác nhận': '⚠ Press again to confirm',
+  'Đã mở khóa tất cả các màn': 'All levels unlocked', 'Đã khóa lại theo tiến độ': 'Levels locked by progress again', 'Đã xóa toàn bộ tiến độ': 'All progress erased',
+  '❓ Cách chơi': '❓ How to play', 'Đã hiểu!': 'Got it!',
+  'Kéo (hoặc chạm) khối lệnh vào khung chương trình, rồi bấm <b>Chạy</b>.': 'Drag (or tap) command blocks into the program panel, then press <b>Run</b>.',
+  'Nhặt hết 🔋 bằng khối <b>Nhặt pin</b> khi đứng đúng ô, rồi tới cổng 🚪.': 'Collect every 🔋 with the <b>Collect battery</b> block while standing on it, then reach the exit 🚪.',
+  'Tránh gai điện ⚡ và đừng ra khỏi lưới. Băng chuyền đẩy robot 1 ô sau mỗi bước.': 'Avoid electric spikes ⚡ and do not leave the grid. Conveyors push the robot 1 tile after each step.',
+  'Nút 🔘 mở cửa khóa 🔒: đứng lên nút rồi dùng khối <b>Bấm nút</b>.': 'Buttons 🔘 open locked doors 🔒: stand on the button and use the <b>Press button</b> block.',
+  'Chạm khối trong chương trình để xóa, kéo để đổi chỗ. Chạm vào ô «thêm vào đây» để chọn nơi chèn (trong Lặp, Nếu, Hàm).': 'Tap a block in the program to delete it, drag to move it. Tap the “add here” slot to choose where to insert (inside Repeat, If, Function).',
+  'Phím: <kbd>Enter</kbd> chạy · <kbd>Space</kbd> bước · <kbd>R</kbd> đặt lại · <kbd>Z</kbd> hoàn tác · <kbd>P</kbd> tạm dừng · <kbd>H</kbd> gợi ý.': 'Keys: <kbd>Enter</kbd> run · <kbd>Space</kbd> step · <kbd>R</kbd> reset · <kbd>Z</kbd> undo · <kbd>P</kbd> pause · <kbd>H</kbd> hint.',
+  'Ít khối + ít bước hơn = nhiều sao. Gợi ý (tối đa 3 lần) sẽ trừ 1 sao.': 'Fewer blocks + fewer steps = more stars. Hints (up to 3) cost 1 star.',
+  '<b>Ô đặc biệt:</b> 🌀 bàn xoay (quay phải 90°) · ①②③④ cổng dịch chuyển · 📦 hộp đẩy (lấp được gai) · sàn nứt chỉ đi 1 lần · gai nhấp nháy bật/tắt theo từng hành động · 🧊 băng trơn (trượt tới khi gặp vật cản).': '<b>Special tiles:</b> 🌀 turntable (turns right 90°) · ①②③④ teleports · 📦 pushable crate (can fill spikes) · cracked floor works only once · blinking spikes toggle with every action · 🧊 ice (slide until blocked).',
+  /* ---- Trình soạn màn ---- */
+  '▦ Tường': '▦ Wall', '🔋 Pin': '🔋 Battery', '⚡ Gai': '⚡ Spike', '🚪 Cổng': '🚪 Exit', '🔘 Nút': '🔘 Button', '🔒 Cửa': '🔒 Door',
+  '⬆ Băng': '⬆ Belt', '➡ Băng': '➡ Belt', '⬇ Băng': '⬇ Belt', '⬅ Băng': '⬅ Belt', '🌀 Bàn xoay': '🌀 Turntable',
+  '① Dịch chuyển': '① Teleport', '② Dịch chuyển': '② Teleport', '📦 Hộp': '📦 Crate', '▒ Sàn nứt': '▒ Cracked floor',
+  '⚡ Gai chẵn': '⚡ Even spike', '⚡ Gai lẻ': '⚡ Odd spike', '🧊 Băng': '🧊 Ice', '🤖 Robot': '🤖 Robot', '🧽 Xóa': '🧽 Erase',
+  'Hãy đặt robot lên bản đồ': 'Place the robot on the map', 'Hãy đặt cổng thoát 🚪': 'Place an exit 🚪',
+  'Mã không hợp lệ': 'Invalid code', 'Thông số lưới không hợp lệ': 'Invalid grid settings', 'Số hàng không khớp': 'Row count does not match',
+  'Độ dài hàng {0} không khớp': 'Row {0} has the wrong length', 'Ký tự lạ: {0}': 'Unknown character: {0}', 'Cần đúng 1 robot': 'Exactly 1 robot is needed',
+  'Thiếu cổng thoát': 'Exit is missing', 'Lỗi: {0}': 'Error: {0}', 'Đã nạp màn!': 'Level loaded!',
+  'Đã sao chép mã vào clipboard!': 'Code copied to clipboard!', 'Hãy sao chép mã trong ô văn bản': 'Copy the code from the text box',
+  /* ---- HTML tĩnh ---- */
+  'Chú robot nhỏ bị lạc trong phòng thí nghiệm và pin sắp cạn! Hãy xếp chuỗi khối lệnh để robot gom hết pin rồi chạy tới cổng thoát.': 'A little robot is lost in the laboratory and its battery is running low! Arrange command blocks so it collects every battery and then reaches the exit.',
+  '⭐ Tổng sao:': '⭐ Total stars:', '🏆 Điểm cao nhất:': '🏆 High score:', '▶ Chơi': '▶ Play', '🗺 Chọn màn': '🗺 Levels', '🛠 Soạn màn': '🛠 Editor',
+  '❓ Hướng dẫn': '❓ Help', '1️⃣ Chạm hoặc kéo khối lệnh vào khung chương trình.': '1️⃣ Tap or drag command blocks into the program panel.',
+  '2️⃣ Bấm': '2️⃣ Press', 'Chạy': 'Run', '(Enter) và xem robot thực hiện từng bước.': '(Enter) and watch the robot go step by step.',
+  '3️⃣ Gom đủ 🔋 rồi tới cổng 🚪. Ít khối + ít bước = nhiều sao!': '3️⃣ Collect all 🔋 then reach the exit 🚪. Fewer blocks + fewer steps = more stars!',
+  '← Menu': '← Menu', 'Bản đồ phòng thí nghiệm': 'Laboratory map', '☰ Màn': '☰ Levels', 'Bước': 'Step', 'Đặt lại': 'Reset', '💡 Gợi ý': '💡 Hint', 'Hoàn tác': 'Undo',
+  'KHỐI LỆNH · chạm hoặc kéo': 'BLOCKS · tap or drag', 'Trình soạn màn': 'Level editor', 'Vẽ bản đồ, thử chơi, chia sẻ bằng mã': 'Draw a map, test it, share it with a code',
+  'CÔNG CỤ VẼ': 'DRAWING TOOLS', 'chạm / kéo trên bản đồ': 'tap / drag on the map', 'Lưới:': 'Grid:', 'Hướng robot:': 'Robot direction:', 'Tối đa khối:': 'Max blocks:',
+  '▶ Thử chơi': '▶ Test play', '🧹 Xóa hết': '🧹 Clear all', 'MÃ CHIA SẺ': 'SHARE CODE', '📋 Tạo mã': '📋 Create code', '📥 Nạp mã': '📥 Load code',
+  'Bật/tắt âm': 'Toggle sound', 'Cài đặt': 'Settings', 'Tạm dừng (P)': 'Pause (P)', 'Chạy từng bước (Space)': 'Run step by step (Space)', 'Đặt lại (R)': 'Reset (R)',
+  'Gợi ý (H)': 'Hint (H)', 'Hoàn tác (Z)': 'Undo (Z)', 'Đóng': 'Close', 'Dán mã màn vào đây rồi bấm Nạp mã…': 'Paste a level code here, then press Load code…',
+  /* ---- Khu ---- */
+  'Phòng khởi động': 'Warm-up Room', 'Tiến, rẽ, nhặt pin, né gai điện': 'Move, turn, collect batteries, dodge electric spikes',
+  'Hành lang lặp': 'Loop Corridor', 'Mở khóa khối Lặp N lần': 'Unlocks the Repeat N times block',
+  'Trạm cảm biến': 'Sensor Station', 'Mở khóa khối Nếu trước mặt có tường': 'Unlocks the If wall ahead block',
+  'Xưởng hàm': 'Function Workshop', 'Mở khóa Hàm tự đặt tên': 'Unlocks custom-named Functions',
+  'Phòng điều khiển': 'Control Room', 'Mở khóa khối Bấm nút và cửa khóa': 'Unlocks the Press button block and locked doors',
+  'Radar gai': 'Spike Radar', 'Khối mới: Nếu trước mặt có gai/hố': 'New block: If spike/hole ahead',
+  'Bàn xoay': 'Turntables', 'Ô mới: bàn xoay tự quay robot 90°': 'New tile: turntables rotate the robot 90° automatically',
+  'Cổng dịch chuyển': 'Teleport Gates', 'Ô mới: cặp cổng dịch chuyển tức thời': 'New tile: paired instant teleport gates',
+  'Đi tới tường': 'Run to the Wall', 'Khối mới: Lặp đến khi trước mặt có tường': 'New block: Repeat until wall ahead',
+  'Kho hộp': 'Crate Depot', 'Ô mới: hộp đẩy, lấp được gai điện': 'New tile: pushable crates that can fill electric spikes',
+  'Sàn nứt': 'Cracked Floor', 'Ô mới: sàn nứt chỉ đi được một lần': 'New tile: cracked floor can be crossed only once',
+  'Gai nhấp nháy': 'Blinking Spikes', 'Ô mới: gai bật/tắt theo nhịp từng bước': 'New tile: spikes toggle on/off with every step',
+  'Hồ băng': 'Ice Lake', 'Ô mới: băng trơn khiến robot trượt': 'New tile: slippery ice makes the robot slide',
+  'Cảm biến pin': 'Battery Sensor', 'Khối mới: Nếu đang đứng trên pin': 'New block: If standing on battery',
+  'Đại sảnh tổng hợp': 'Grand Hall', 'Mọi cơ chế cùng xuất hiện': 'Every mechanic appears together',
+  /* ---- Tên màn ---- */
+  'Bước đầu tiên': 'First Steps', 'Rẽ góc': 'Turn the Corner', 'Gai điện': 'Electric Spikes', 'Pin đôi': 'Double Battery', 'Băng chuyền': 'Conveyor', 'Thử thách khu 1': 'Zone 1 Challenge',
+  'Lặp lại': 'Looping', 'Hình vuông': 'Square', 'Cầu thang': 'Staircase', 'Rắn săn pin': 'Battery Snake', 'Quanh hồ': 'Around the Lake', 'Viền phòng thí nghiệm': 'Lab Perimeter',
+  'Cảm biến đầu tiên': 'First Sensor', 'Vòng quanh phòng': 'Around the Room', 'Xoắn ốc': 'Spiral', 'Nhảy qua trụ': 'Hop the Pillars', 'Xoắn ốc ngược': 'Reverse Spiral', 'Vòng đầy pin': 'Battery Ring',
+  'Hàm đầu tiên': 'First Function', 'Hoa pin': 'Battery Flower', 'Hai làn trụ': 'Two Pillar Lanes', 'Hoa pin lớn': 'Big Battery Flower', 'Cầu thang đôi': 'Double Staircase', 'Trạm băng chuyền': 'Conveyor Station',
+  'Nút và cửa': 'Button and Door', 'Bức tường có cửa': 'Wall with a Door', 'Nút ở góc xa': 'Far Corner Button', 'Vòng quay có cửa': 'Looping Door', 'Phòng chữ thập': 'Cross Room', 'Phòng thí nghiệm': 'The Laboratory',
+  'Radar đầu tiên': 'First Radar', 'Gai và pin': 'Spikes and Batteries', 'Hành lang gai': 'Spike Corridor', 'Rẽ rồi vòng gai': 'Turn then Dodge', 'Vành đai điện': 'Electric Belt', 'Vành đai lớn': 'Big Belt',
+  'Bàn xoay đầu tiên': 'First Turntable', 'Quay vòng vòng': 'Spinning Around', 'Xoay đúng lúc': 'Spin on Time', 'Mê cung xoay': 'Spinning Maze', 'Chuyển hướng liên hoàn': 'Chain Reaction', 'Công viên xoay': 'Spin Park',
+  'Cổng kỳ lạ': 'Strange Gates', 'Qua bên kia': 'To the Other Side', 'Hai bờ': 'Two Shores', 'Nhảy cóc không gian': 'Space Leapfrog', 'Đường tắt bí mật': 'Secret Shortcut', 'Trạm dịch chuyển': 'Teleport Station',
+  'Tới tận tường': 'All the Way to the Wall', 'Ngoằn ngoèo': 'Zigzag', 'Xoắn ốc nhỏ': 'Small Spiral', 'Xoắn ốc lớn': 'Large Spiral', 'Bốn hành lang': 'Four Corridors', 'Vành đai gai': 'Spike Belt',
+  'Hộp đầu tiên': 'First Crate', 'Lấp gai': 'Fill the Spikes', 'Đẩy cho khéo': 'Push Carefully', 'Kho chật chội': 'Cramped Depot', 'Kho hai hộp': 'Two-Crate Depot', 'Kho hàng lớn': 'Big Warehouse',
+  'Bước chân nhẹ': 'Light Footsteps', 'Sàn giòn': 'Brittle Floor', 'Đi một lần': 'Only Once', 'Đường mòn mong manh': 'Fragile Trail', 'Mê cung nứt': 'Cracked Maze', 'Cầu thang vỡ': 'Broken Stairs',
+  'Nhịp đầu tiên': 'First Beat', 'Chờ đúng lúc': 'Wait for It', 'Gai nhịp đôi': 'Double-Beat Spikes', 'Hàng rào nhấp nháy': 'Blinking Fence', 'Nhịp điệu điện': 'Electric Rhythm', 'Dàn nhạc gai': 'Spike Orchestra',
+  'Trượt nhẹ': 'Gentle Slide', 'Sân băng': 'Ice Rink', 'Không phanh': 'No Brakes', 'Hồ băng dài': 'Long Ice Lake', 'Trượt rồi rẽ': 'Slide then Turn', 'Cực băng': 'Polar Ice',
+  'Có pin không?': 'Any Battery?', 'Hai hàng': 'Two Rows', 'Ba hàng': 'Three Rows', 'Hàm quét pin': 'Sweeping Function', 'Quét giữa gai': 'Sweep Between Spikes', 'Quét vành đai': 'Sweep the Belt',
+  'Sảnh khởi động': 'Start Lobby', 'Trộn lẫn': 'Mixed Up', 'Dòng chảy kỳ lạ': 'Strange Current', 'Phòng thử nghiệm B': 'Test Room B', 'Thử thách lớn': 'Grand Challenge', 'Đại sảnh cuối cùng': 'The Final Hall',
+  /* ---- Lời giới thiệu màn ---- */
+  'Kéo (hoặc chạm) khối "Tiến 1 ô" và "Nhặt pin" vào chương trình, rồi bấm Chạy!': 'Drag (or tap) the "Move 1 tile" and "Collect battery" blocks into the program, then press Run!',
+  'Khối rẽ đổi hướng robot. Đèn mắt cam cho biết robot đang nhìn về đâu.': 'Turn blocks change the robot\'s direction. The orange eye light shows where it is facing.',
+  'Gai điện màu hồng đỏ làm robot hỏng. Hãy đi vòng qua!': 'Pink-red electric spikes break the robot. Go around them!',
+  'Băng chuyền đẩy robot thêm 1 ô sau MỖI bước, theo hướng mũi tên.': 'Conveyors push the robot 1 extra tile after EVERY step, in the arrow\'s direction.',
+  'Khối Lặp chạy lại các khối bên trong. Bấm − / + trên khối để đổi số lần.': 'The Repeat block runs its inner blocks again. Press − / + on the block to change the count.',
+  'Khối "Nếu trước mặt có tường" chạy nhánh "thì" khi có tường, ngược lại chạy nhánh "không thì". Ngoài lưới cũng tính là tường!': 'The "If wall ahead" block runs the "then" branch when there is a wall, otherwise the "else" branch. Outside the grid counts as a wall too!',
+  'Gặp trụ chắn thì đi vòng, còn không thì tiến. Một khối "Nếu" xử lý được mọi trụ!': 'Go around a pillar if it blocks you, otherwise move forward. One "If" block handles every pillar!',
+  'Soạn dãy lệnh "nhảy qua trụ" trong khung Hàm một lần, rồi dùng khối "Gọi hàm" nhiều lần. Bạn có thể đổi tên hàm!': 'Write the "hop over the pillar" commands once in the Function panel, then use the "Call function" block many times. You can rename the function!',
+  'Đứng trên nút bấm rồi dùng khối "Bấm nút" để mở các cửa khóa màu vàng.': 'Stand on a button and use the "Press button" block to open the yellow locked doors.',
+  'Màn cuối! Kết hợp mọi thứ bạn đã học: băng chuyền, nút bấm, cửa khóa và cảm biến.': 'Final level! Combine everything you have learned: conveyors, buttons, locked doors and sensors.',
+  'Khối mới «Nếu trước mặt có gai/hố» chạy nhánh "thì" khi ô phía trước nguy hiểm. Dùng nó để vòng qua gai mà không cần biết gai nằm ở đâu!': 'The new “If spike/hole ahead” block runs the "then" branch when the tile ahead is dangerous. Use it to dodge spikes without knowing where they are!',
+  'Bàn xoay tự quay robot 90° sang phải ngay khi robot bước lên. Hãy tận dụng nó để đổi hướng!': 'A turntable rotates the robot 90° to the right as soon as it steps on. Use it to change direction!',
+  'Hai cổng dịch chuyển cùng số sẽ đưa robot tới nhau ngay lập tức. Robot giữ nguyên hướng nhìn sau khi dịch chuyển.': 'Two teleport gates with the same number send the robot to each other instantly. The robot keeps its facing direction after teleporting.',
+  'Khối mới «Lặp đến khi trước mặt có tường» lặp lại cho tới khi robot bị chặn – không cần đếm số ô!': 'The new “Repeat until wall ahead” block loops until the robot is blocked – no need to count tiles!',
+  'Hộp gỗ đẩy được bằng cách đi vào nó. Đẩy hộp vào gai điện sẽ lấp gai và hộp biến mất. Hộp không đẩy được vào tường hay hộp khác.': 'Wooden crates can be pushed by walking into them. Pushing a crate into an electric spike fills it and the crate disappears. Crates cannot be pushed into walls or other crates.',
+  'Sàn nứt chỉ đi được một lần: robot rời đi là ô đó sập thành hố, rơi xuống là hỏng!': 'Cracked floor works only once: after the robot leaves, the tile collapses into a hole – fall in and you break!',
+  'Gai nhấp nháy bật/tắt theo từng hành động của robot (kể cả khi chỉ rẽ). Ô gai đỏ đang bật, ô gai mờ đang tắt; hai kiểu gai luân phiên nhau. Hãy canh nhịp!': 'Blinking spikes toggle with every robot action (even just turning). Red spikes are on, faded spikes are off; the two kinds alternate. Watch the rhythm!',
+  'Trên băng trơn, robot trượt thẳng cho tới khi gặp vật cản. Gai hoặc hố trên đường trượt sẽ làm robot hỏng!': 'On slippery ice the robot slides straight until it hits an obstacle. Spikes or holes on the way will break it!',
+  'Khối mới «Nếu đang đứng trên pin» giúp robot chỉ nhặt khi có pin – rất hợp để quét một hàng pin rải rác.': 'The new “If standing on battery” block lets the robot collect only when there is one – great for sweeping a row of scattered batteries.',
+  'Đại sảnh cuối cùng: mọi cơ chế đã học xuất hiện cùng lúc. Chúc may mắn!': 'The final hall: every mechanic you have learned appears at once. Good luck!'
+};
+
+function T(k) {
+  let s = (LANG === 'en' && EN[k] !== undefined) ? EN[k] : k;
+  if (arguments.length > 1) { const a = arguments; s = s.replace(/\{(\d)\}/g, (m, i) => a[+i + 1]); }
+  return s;
+}
+
+/* Dịch phần HTML tĩnh: text node + thuộc tính title/placeholder/aria-label + phần tử có data-vi */
+const LANG_ATTRS = ['title', 'placeholder', 'aria-label'];
+function applyLang() {
+  document.documentElement.lang = LANG;
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT), nodes = [];
+  while (w.nextNode()) nodes.push(w.currentNode);
+  nodes.forEach(n => {
+    if (n._o === undefined) { const k = n.nodeValue.trim(); n._o = (k && EN[k] !== undefined && !n.parentNode.closest('script,[data-vi]')) ? k : null; }
+    if (n._o) { const m = n.nodeValue.match(/^(\s*)[\s\S]*?(\s*)$/); n.nodeValue = m[1] + T(n._o) + m[2]; }
+  });
+  document.querySelectorAll('[title],[placeholder],[aria-label]').forEach(e => LANG_ATTRS.forEach(a => {
+    const dk = 'o' + a.replace('-', '');
+    if (e.dataset[dk] === undefined) { const v = e.getAttribute(a); e.dataset[dk] = (v && EN[v] !== undefined) ? v : ''; }
+    if (e.dataset[dk]) e.setAttribute(a, T(e.dataset[dk]));
+  }));
+  document.querySelectorAll('[data-vi]').forEach(e => { e.textContent = T(e.dataset.vi); });
+}
+
+/* =====================================================================
+   4. TIỆN ÍCH & LƯU TRỮ (localStorage)
+   ===================================================================== */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; }
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const ease = p => p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+const clone = o => JSON.parse(JSON.stringify(o));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function rnd(n) { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); }
+function shade(hex, amt) { // amt < 0: tối hơn, > 0: sáng hơn
+  const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  const f = v => Math.round(clamp(amt < 0 ? v * (1 + amt) : v + (255 - v) * amt, 0, 255));
+  return '#' + [f(r), f(g), f(b)].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+const ICON = { move: '⬆', left: '↶', right: '↷', collect: '🔋', press: '🔘', repeat: '🔁', ifwall: '🧱', call: 'ƒ', ifspike: '⚠', untilwall: '♾', ifbat: '🔎' };
+const SAVE_KEY = 'robotGomPin.v1';
+let SAVE = { levels: {}, high: 0, sound: true, speed: CONFIG.defaultSpeed, unlockAll: false, lang: 'vi', volume: 70 };
+function loadSave() {
+  try { const r = localStorage.getItem(SAVE_KEY); if (r) { const o = JSON.parse(r); if (o && typeof o === 'object') { SAVE = Object.assign(SAVE, o); if (!SAVE.levels) SAVE.levels = {}; } } } catch (e) { }
+}
+function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(SAVE)); } catch (e) { } }
+function levelStars(i) { const r = SAVE.levels[LEVELS[i].id]; return r ? r.stars : 0; }
+function isUnlocked(i) { return CONFIG.unlockAll || SAVE.unlockAll || i === 0 || levelStars(i - 1) > 0; }
+function maxStars() { return LEVELS.length * 3; }
+function totalStars() { return LEVELS.reduce((s, _, i) => s + levelStars(i), 0); }
+function totalScore() { return LEVELS.reduce((s, l) => s + ((SAVE.levels[l.id] || {}).score || 0), 0); }
+
+/* =====================================================================
+   5. ÂM THANH (Web Audio API)
+   ===================================================================== */
+const Snd = {
+  ctx: null, master: null,
+  init() {
+    if (this.ctx) return;
+    try { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; this.ctx = new AC(); this.master = this.ctx.createGain(); this.applyVol(); const cp = this.ctx.createDynamicsCompressor(); this.master.connect(cp); cp.connect(this.ctx.destination); } catch (e) { this.ctx = null; }
+  },
+  applyVol() { if (this.master) this.master.gain.value = Math.max(0, Math.min(100, SAVE.volume)) / 100 * 1.6; }, // 100% = 1.6 (to hơn bản cũ ~3,5 lần)
+  resume() { this.init(); try { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); } catch (e) { } },
+  tone(f, d, type, vol, to, delay) {
+    if (!SAVE.sound || !this.ctx) return;
+    try {
+      const t0 = this.ctx.currentTime + (delay || 0), o = this.ctx.createOscillator(), g = this.ctx.createGain();
+      o.type = type || 'sine'; o.frequency.setValueAtTime(f, t0);
+      if (to) o.frequency.exponentialRampToValueAtTime(Math.max(20, to), t0 + d);
+      g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(vol || .15, t0 + .012); g.gain.exponentialRampToValueAtTime(.0001, t0 + d);
+      o.connect(g); g.connect(this.master); o.start(t0); o.stop(t0 + d + .03);
+    } catch (e) { }
+  },
+  noise(d, vol, delay, freq) {
+    if (!SAVE.sound || !this.ctx) return;
+    try {
+      const t0 = this.ctx.currentTime + (delay || 0), n = Math.floor(this.ctx.sampleRate * d), buf = this.ctx.createBuffer(1, n, this.ctx.sampleRate), da = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) da[i] = (Math.random() * 2 - 1) * (1 - i / n);
+      const s = this.ctx.createBufferSource(), f = this.ctx.createBiquadFilter(), g = this.ctx.createGain();
+      f.type = 'lowpass'; f.frequency.value = freq || 800; g.gain.value = vol || .2;
+      s.buffer = buf; s.connect(f); f.connect(g); g.connect(this.master); s.start(t0);
+    } catch (e) { }
+  },
+  play(n) {
+    if (!SAVE.sound) return; this.init(); if (!this.ctx) return;
+    switch (n) {
+      case 'add': this.tone(520, .09, 'triangle', .16, 760); break;            // thêm khối
+      case 'remove': this.tone(320, .09, 'triangle', .13, 190); break;
+      case 'pick': this.tone(440, .05, 'triangle', .1, 520); break;
+      case 'step': this.tone(190, .07, 'square', .05, 150); break;             // robot đi
+      case 'turn': this.tone(330, .08, 'triangle', .09, 470); break;
+      case 'bump': this.noise(.14, .22, 0, 500); this.tone(95, .13, 'sine', .25, 60); break;
+      case 'collect': [784, 988, 1319].forEach((f, i) => this.tone(f, .13, 'square', .09, 0, i * .06)); break;
+      case 'miss': this.tone(200, .15, 'sawtooth', .07, 140); break;
+      case 'press': this.tone(260, .06, 'square', .1, 200); break;
+      case 'door': this.tone(300, .35, 'sine', .16, 950); this.tone(1200, .2, 'triangle', .07, 1800, .15); break; // mở cửa
+      case 'win': [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone(f, .22, 'triangle', .15, 0, i * .09)); break;
+      case 'die': this.tone(420, .55, 'sawtooth', .16, 55); this.noise(.5, .25, 0, 1400); break;
+      case 'hint': this.tone(880, .25, 'triangle', .12, 0); this.tone(1320, .3, 'triangle', .08, 0, .08); break;
+      case 'ui': this.tone(620, .05, 'triangle', .09, 740); break;
+      case 'slide': this.tone(700, .14, 'sine', .06, 1200); break;
+      case 'push': this.noise(.1, .15, 0, 300); this.tone(140, .1, 'square', .08, 100); break;
+      case 'tele': this.tone(400, .3, 'sine', .12, 1400); this.tone(1400, .2, 'triangle', .06, 500, .15); break;
+    }
+  }
+};
+
+/* =====================================================================
+   6. HẠT (PARTICLES) – toạ độ tính theo đơn vị ô lưới
+   ===================================================================== */
+const PART = [];
+function addPart(p) { if (PART.length < 700) PART.push(p); }
+function burst(x, y, n, cols, speed, life, size, g) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * 6.283, s = (speed || 3) * (.4 + Math.random() * .8);
+    addPart({ k: 'dot', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1, g: g === undefined ? 6 : g, life: life || .7, max: life || .7, size: (size || .08) * (.6 + Math.random() * .8), col: cols[i % cols.length] });
+  }
+}
+function sparks(x, y, n) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * 6.283, s = 2 + Math.random() * 5;
+    addPart({ k: 'spark', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 2, g: 9, life: .5 + Math.random() * .6, max: 1, col: Math.random() < .5 ? '#ffd23f' : '#fff3b0' });
+  }
+  for (let i = 0; i < 6; i++) addPart({ k: 'smoke', x: x + (Math.random() - .5) * .3, y, vx: (Math.random() - .5) * .6, vy: -.6 - Math.random(), g: 0, life: 1.4, max: 1.4, size: .15, col: '#6b7280' });
+}
+function confetti(w, h) {
+  const cols = ['#ff5d7a', '#ffd23f', '#4c8df6', '#35c27e', '#b58cf0', '#ff9a3c'];
+  for (let i = 0; i < 150; i++)
+    addPart({ k: 'conf', x: -.5 + Math.random() * (w + 1), y: -1.5 - Math.random() * 2, vx: (Math.random() - .5) * 1.6, vy: 1 + Math.random() * 3, g: 3, life: 3.6 + Math.random(), max: 3.6, size: .1 + Math.random() * .08, rot: Math.random() * 6, vr: (Math.random() - .5) * 12, col: cols[i % cols.length] });
+}
+function updateParticles(dt) {
+  for (let i = PART.length - 1; i >= 0; i--) {
+    const p = PART[i]; p.life -= dt;
+    if (p.life <= 0) { PART.splice(i, 1); continue; }
+    p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+    if (p.rot !== undefined) p.rot += p.vr * dt;
+    if (p.k === 'smoke') p.size += dt * .25;
+  }
+}
+function drawParticles(c, L) {
+  const cell = L.cell;
+  for (const p of PART) {
+    const px = L.ox + p.x * cell, py = L.oy + p.y * cell, a = clamp(p.life / p.max * 1.6, 0, 1);
+    c.globalAlpha = p.k === 'smoke' ? a * .45 : a;
+    if (p.k === 'dot' || p.k === 'smoke') { c.fillStyle = p.col; c.beginPath(); c.arc(px, py, p.size * cell, 0, 6.283); c.fill(); }
+    else if (p.k === 'spark') { c.strokeStyle = p.col; c.lineWidth = Math.max(1.5, cell * .03); c.beginPath(); c.moveTo(px, py); c.lineTo(px - p.vx * cell * .05, py - p.vy * cell * .05); c.stroke(); }
+    else if (p.k === 'conf') { c.save(); c.translate(px, py); c.rotate(p.rot); c.fillStyle = p.col; c.fillRect(-p.size * cell, -p.size * cell * .5, p.size * cell * 2, p.size * cell); c.restore(); }
+  }
+  c.globalAlpha = 1;
+}
+
+/* =====================================================================
+   7. VẼ CANVAS (bản đồ, robot, hiệu ứng)
+   ===================================================================== */
+function rr(c, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+}
+function layoutFor(W, H, w, h) {
+  const cell = Math.max(8, Math.floor(Math.min(W / (w + .45), H / (h + .45))));
+  return { cell, ox: Math.floor((W - cell * w) / 2), oy: Math.floor((H - cell * h) / 2) };
+}
+function drawBattery(c, cx, cy, s, t, seed) {
+  const bob = Math.sin(t * 2.4 + seed) * s * .03, B = CONFIG.board;
+  const gl = c.createRadialGradient(cx, cy, 0, cx, cy, s * .5);
+  gl.addColorStop(0, 'rgba(255,210,63,' + (.4 + .15 * Math.sin(t * 3 + seed)) + ')'); gl.addColorStop(1, 'rgba(255,210,63,0)');
+  c.fillStyle = gl; c.beginPath(); c.arc(cx, cy, s * .5, 0, 6.283); c.fill();
+  const w = s * .34, h = s * .5, x = cx - w / 2, y = cy - h / 2 + bob;
+  c.fillStyle = shade(B.battery, -.35); rr(c, cx - w * .22, y - s * .06, w * .44, s * .09, s * .03); c.fill();
+  c.fillStyle = B.battery; rr(c, x, y, w, h, s * .08); c.fill();
+  c.strokeStyle = shade(B.battery, -.3); c.lineWidth = Math.max(1, s * .025); c.stroke();
+  c.fillStyle = 'rgba(255,255,255,.55)'; rr(c, x + w * .12, y + h * .08, w * .16, h * .84, s * .03); c.fill();
+  c.fillStyle = '#9a6a00'; c.beginPath(); // tia chớp
+  c.moveTo(cx + w * .1, y + h * .14); c.lineTo(cx - w * .2, y + h * .54); c.lineTo(cx, y + h * .54); c.lineTo(cx - w * .1, y + h * .88); c.lineTo(cx + w * .24, y + h * .44); c.lineTo(cx + w * .02, y + h * .44); c.closePath(); c.fill();
+}
+function drawSpikes(c, px, py, cell, t, x, y) {
+  c.fillStyle = CONFIG.board.spike;
+  for (let r = 0; r < 2; r++) for (let q = 0; q < 3; q++) {
+    const bx = px + cell * (.2 + q * .3 + (r ? .15 : 0)), by = py + cell * (.42 + r * .34);
+    if (r && q === 2) continue;
+    c.beginPath(); c.moveTo(bx - cell * .12, by); c.lineTo(bx, by - cell * .3); c.lineTo(bx + cell * .12, by); c.closePath(); c.fill();
+  }
+  const k = Math.floor(t * 12) + x * 13 + y * 7; // tia điện nhấp nháy
+  c.strokeStyle = '#fff6b0'; c.lineWidth = Math.max(1.5, cell * .035); c.beginPath();
+  let ax = px + cell * (.2 + rnd(k) * .2), ay = py + cell * .2; c.moveTo(ax, ay);
+  for (let i = 1; i <= 4; i++) { ax = px + cell * (.2 + rnd(k + i) * .6); ay = py + cell * (.2 + i * .15); c.lineTo(ax, ay); }
+  c.stroke();
+}
+function drawCrate(c, x, y, cell) {
+  const X = x + cell * .1, Y = y + cell * .1, w = cell * .8;
+  c.fillStyle = 'rgba(0,0,0,.16)'; rr(c, X + 2, Y + cell * .07, w, w, cell * .1); c.fill();
+  c.fillStyle = '#d19a5a'; rr(c, X, Y, w, w, cell * .1); c.fill();
+  c.strokeStyle = '#8a5a2b'; c.lineWidth = Math.max(1.5, cell * .05); rr(c, X + cell * .05, Y + cell * .05, w - cell * .1, w - cell * .1, cell * .07); c.stroke();
+  c.beginPath(); c.moveTo(X + cell * .12, Y + cell * .12); c.lineTo(X + w - cell * .12, Y + w - cell * .12); c.moveTo(X + w - cell * .12, Y + cell * .12); c.lineTo(X + cell * .12, Y + w - cell * .12); c.stroke();
+  c.fillStyle = 'rgba(255,255,255,.25)'; rr(c, X + cell * .08, Y + cell * .08, w - cell * .16, cell * .08, cell * .03); c.fill();
+}
+function drawTile(c, ch, px, py, cell, t, S, x, y, open) {
+  const B = CONFIG.board, cx = px + cell / 2, cy = py + cell / 2;
+  if (ch === '#') { // tường khối nổi
+    const w = cell * .92, h = cell * .92, X = px + cell * .04, Y = py + cell * .02;
+    c.fillStyle = B.wallSide; rr(c, X, Y + cell * .08, w, h, cell * .14); c.fill();
+    c.fillStyle = B.wallTop; rr(c, X, Y, w, h - cell * .06, cell * .14); c.fill();
+    c.fillStyle = 'rgba(255,255,255,.3)'; rr(c, X + cell * .08, Y + cell * .07, w - cell * .16, cell * .12, cell * .05); c.fill();
+    c.fillStyle = 'rgba(0,0,0,.12)'; [[.2, .65], [.8, .65]].forEach(q => { c.beginPath(); c.arc(X + w * q[0], Y + h * q[1], cell * .035, 0, 6.283); c.fill(); });
+  } else if (ch === 'S') { // gai điện
+    c.fillStyle = '#f6b9c6'; rr(c, px + cell * .08, py + cell * .08, cell * .84, cell * .84, cell * .14); c.fill();
+    drawSpikes(c, px, py, cell, t, x, y);
+  } else if (ch === 'P' || ch === 'Q') { // gai nhấp nháy: P bật khi số bước đã chạy là chẵn, Q ngược lại
+    const on = ((S.step || 0) % 2 === 0) === (ch === 'P');
+    c.fillStyle = on ? '#f6b9c6' : (ch === 'P' ? '#f3dbe2' : '#dcd6f3'); rr(c, px + cell * .08, py + cell * .08, cell * .84, cell * .84, cell * .14); c.fill();
+    if (on) drawSpikes(c, px, py, cell, t, x, y);
+    else { c.fillStyle = 'rgba(110,90,130,.35)'; [[.3, .55], [.5, .45], [.7, .55], [.4, .72], [.6, .72]].forEach(q => { c.beginPath(); c.arc(px + cell * q[0], py + cell * q[1], cell * .04, 0, 6.283); c.fill(); }); }
+    c.fillStyle = on ? '#fff' : 'rgba(90,70,120,.6)';
+    for (let i = 0; i < (ch === 'P' ? 1 : 2); i++) { c.beginPath(); c.arc(px + cell * (.18 + i * .13), py + cell * .18, cell * .045, 0, 6.283); c.fill(); }
+  } else if (ch === 'F') { // sàn nứt
+    c.fillStyle = 'rgba(255,255,255,.38)'; rr(c, px + cell * .08, py + cell * .08, cell * .84, cell * .84, cell * .12); c.fill();
+    c.strokeStyle = 'rgba(80,110,100,.65)'; c.lineWidth = Math.max(1.5, cell * .035); c.lineCap = 'round'; c.beginPath();
+    c.moveTo(px + cell * .25, py + cell * .2); c.lineTo(px + cell * .45, py + cell * .45); c.lineTo(px + cell * .36, py + cell * .62); c.lineTo(px + cell * .58, py + cell * .84);
+    c.moveTo(px + cell * .45, py + cell * .45); c.lineTo(px + cell * .74, py + cell * .36); c.stroke();
+  } else if (ch === 'H') { // hố
+    c.fillStyle = '#44555d'; rr(c, px + cell * .08, py + cell * .08, cell * .84, cell * .84, cell * .22); c.fill();
+    c.fillStyle = '#1f2a30'; rr(c, px + cell * .17, py + cell * .17, cell * .66, cell * .66, cell * .18); c.fill();
+    c.strokeStyle = 'rgba(255,255,255,.18)'; c.lineWidth = cell * .03; rr(c, px + cell * .08, py + cell * .08, cell * .84, cell * .84, cell * .22); c.stroke();
+  } else if (ch === 'I') { // băng trơn
+    c.fillStyle = '#dff4ff'; rr(c, px + cell * .06, py + cell * .06, cell * .88, cell * .88, cell * .14); c.fill();
+    c.strokeStyle = '#a8dcf2'; c.lineWidth = Math.max(1.5, cell * .04); rr(c, px + cell * .06, py + cell * .06, cell * .88, cell * .88, cell * .14); c.stroke();
+    c.strokeStyle = 'rgba(255,255,255,.95)'; c.lineWidth = Math.max(1.5, cell * .05); c.lineCap = 'round'; c.beginPath();
+    c.moveTo(px + cell * .2, py + cell * .4); c.lineTo(px + cell * .42, py + cell * .16); c.moveTo(px + cell * .28, py + cell * .62); c.lineTo(px + cell * .6, py + cell * .26); c.stroke();
+    const tw = .5 + .5 * Math.sin(t * 3 + x * 2 + y); c.fillStyle = 'rgba(255,255,255,' + (.5 + tw * .5) + ')'; c.beginPath(); c.arc(px + cell * .72, py + cell * .7, cell * (.04 + tw * .03), 0, 6.283); c.fill();
+  } else if (ch === 'O') { // bàn xoay
+    c.fillStyle = '#d9c9f7'; c.beginPath(); c.arc(cx, cy, cell * .4, 0, 6.283); c.fill();
+    c.save(); c.translate(cx, cy); c.rotate(t * 1.4); c.strokeStyle = '#7d58d6'; c.lineWidth = cell * .07; c.lineCap = 'round';
+    c.beginPath(); c.arc(0, 0, cell * .22, 0, Math.PI * 1.5); c.stroke();
+    c.fillStyle = '#7d58d6'; c.beginPath(); c.moveTo(cell * .14, -cell * .22); c.lineTo(0, -cell * .31); c.lineTo(0, -cell * .13); c.closePath(); c.fill(); c.restore();
+  } else if (ch >= '1' && ch <= '4') { // cổng dịch chuyển
+    const col = ['#7c5cff', '#ff6fae', '#1fa8ee', '#f0a020'][+ch - 1];
+    const g = c.createRadialGradient(cx, cy, 0, cx, cy, cell * .46); g.addColorStop(0, col + 'cc'); g.addColorStop(1, col + '14');
+    c.fillStyle = g; c.beginPath(); c.arc(cx, cy, cell * .44, 0, 6.283); c.fill();
+    c.save(); c.translate(cx, cy); c.rotate(t * 2 * (+ch % 2 ? 1 : -1)); c.strokeStyle = col; c.lineWidth = cell * .06; c.setLineDash([cell * .12, cell * .09]);
+    c.beginPath(); c.arc(0, 0, cell * .34, 0, 6.283); c.stroke(); c.setLineDash([]); c.restore();
+    c.fillStyle = '#fff'; c.font = '900 ' + Math.round(cell * .3) + 'px "Trebuchet MS",sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(ch, cx, cy + cell * .02);
+  } else if (ch === 'X') { // cổng thoát
+    if (open) {
+      const g = c.createRadialGradient(cx, cy, cell * .05, cx, cy, cell * .5);
+      g.addColorStop(0, 'rgba(160,255,200,.95)'); g.addColorStop(1, 'rgba(53,194,126,.15)');
+      c.fillStyle = g; c.beginPath(); c.arc(cx, cy, cell * .44, 0, 6.283); c.fill();
+      c.save(); c.translate(cx, cy); c.rotate(t * 1.6); c.strokeStyle = B.exitOn; c.lineWidth = cell * .06; c.setLineDash([cell * .14, cell * .1]);
+      c.beginPath(); c.arc(0, 0, cell * .36, 0, 6.283); c.stroke(); c.setLineDash([]); c.restore();
+      c.fillStyle = '#fff'; c.beginPath(); c.arc(cx, cy, cell * .12 + Math.sin(t * 4) * cell * .02, 0, 6.283); c.fill();
+    } else {
+      c.fillStyle = '#d6dde0'; c.beginPath(); c.arc(cx, cy, cell * .4, 0, 6.283); c.fill();
+      c.strokeStyle = '#aab6bb'; c.lineWidth = cell * .06; c.setLineDash([cell * .1, cell * .08]); c.beginPath(); c.arc(cx, cy, cell * .34, 0, 6.283); c.stroke(); c.setLineDash([]);
+      c.fillStyle = '#8d9aa0'; rr(c, cx - cell * .12, cy - cell * .02, cell * .24, cell * .18, cell * .04); c.fill();
+      c.strokeStyle = '#8d9aa0'; c.lineWidth = cell * .045; c.beginPath(); c.arc(cx, cy - cell * .02, cell * .08, Math.PI, 0); c.stroke();
+    }
+  } else if (ch === 'K') { // nút bấm
+    c.fillStyle = '#e6b26a'; c.beginPath(); c.arc(cx, cy, cell * .34, 0, 6.283); c.fill();
+    c.fillStyle = open ? '#6fd49a' : '#ff8a5c'; c.beginPath(); c.arc(cx, cy + (open ? cell * .02 : -cell * .03), cell * .25, 0, 6.283); c.fill();
+    c.fillStyle = 'rgba(255,255,255,.45)'; c.beginPath(); c.arc(cx - cell * .07, cy - cell * .08, cell * .07, 0, 6.283); c.fill();
+  } else if (ch === 'D') { // cửa khóa
+    const o = S.doorT || 0;
+    c.strokeStyle = 'rgba(214,160,40,.75)'; c.lineWidth = Math.max(1.5, cell * .04); c.setLineDash([cell * .1, cell * .08]);
+    rr(c, px + cell * .08, py + cell * .08, cell * .84, cell * .84, cell * .12); c.stroke(); c.setLineDash([]);
+    if (o < .98) {
+      const hh = cell * .84 * (1 - o), g = c.createLinearGradient(0, py, 0, py + cell);
+      g.addColorStop(0, '#ffe08a'); g.addColorStop(1, '#f0b429');
+      c.fillStyle = g; rr(c, px + cell * .08, py + cell * .08, cell * .84, hh, cell * .12); c.fill();
+      if (o < .5) {
+        c.fillStyle = 'rgba(160,100,0,.35)'; c.fillRect(px + cell * .16, py + cell * .26, cell * .68, cell * .06); c.fillRect(px + cell * .16, py + cell * .68, cell * .68, cell * .06);
+        c.fillStyle = '#8a5a00'; c.beginPath(); c.arc(cx, cy - cell * .03, cell * .08, 0, 6.283); c.fill(); c.fillRect(cx - cell * .025, cy, cell * .05, cell * .14);
+      }
+    }
+  } else if ('^>v<'.indexOf(ch) >= 0) { // băng chuyền
+    const d = '^>v<'.indexOf(ch);
+    c.fillStyle = '#9fd9c3'; rr(c, px + cell * .06, py + cell * .06, cell * .88, cell * .88, cell * .14); c.fill();
+    c.save(); c.translate(cx, cy); c.rotate(d * Math.PI / 2);
+    c.strokeStyle = '#2f8f6c'; c.lineWidth = Math.max(2, cell * .07); c.lineCap = 'round'; c.lineJoin = 'round';
+    for (let i = 0; i < 3; i++) {
+      const p = (t * .9 + i / 3) % 1, yy = (.5 - p) * cell * .8; c.globalAlpha = Math.sin(p * Math.PI);
+      c.beginPath(); c.moveTo(-cell * .2, yy + cell * .1); c.lineTo(0, yy - cell * .08); c.lineTo(cell * .2, yy + cell * .1); c.stroke();
+    }
+    c.globalAlpha = 1; c.restore();
+  }
+}
+function drawRobot(c, x, y, s, ang, t, o) {
+  o = o || {};
+  const hop = (o.hop || 0) * s, sq = o.sq || 0, B = CONFIG.board;
+  c.save();
+  c.fillStyle = 'rgba(0,0,0,.18)'; c.beginPath(); c.ellipse(x, y + s * .26, s * .3 * (1 - hop / s), s * .1, 0, 0, 6.283); c.fill();
+  c.translate(x, y - hop + s * .02); const sc = o.scale === undefined ? 1 : o.scale; c.scale((1 + sq * .08) * sc, (1 - sq * .08) * sc);
+  const bodyC = o.dead ? '#8a94a6' : B.robot, rad = ang * Math.PI / 180, ca = Math.cos(rad), sa = Math.sin(rad);
+  c.save(); c.rotate(rad);
+  c.fillStyle = '#3d4a5c'; // bánh xe
+  [-1, 1].forEach(sd => { rr(c, sd * s * .27 - s * .06, -s * .21, s * .12, s * .42, s * .05); c.fill(); });
+  c.strokeStyle = 'rgba(255,255,255,.25)'; c.lineWidth = Math.max(1, s * .02);
+  const roll = (o.wheel || 0) % 1;
+  [-1, 1].forEach(sd => { for (let i = 0; i < 3; i++) { const yy = -s * .17 + ((i / 3 + roll) % 1) * s * .34; c.beginPath(); c.moveTo(sd * s * .27 - s * .05, yy); c.lineTo(sd * s * .27 + s * .05, yy); c.stroke(); } });
+  c.fillStyle = shade(bodyC, -.25); rr(c, -s * .27, -s * .25, s * .54, s * .54, s * .15); c.fill();
+  c.fillStyle = bodyC; rr(c, -s * .27, -s * .28, s * .54, s * .52, s * .15); c.fill();
+  c.fillStyle = 'rgba(255,255,255,.28)'; rr(c, -s * .2, -s * .24, s * .4, s * .07, s * .035); c.fill();
+  c.fillStyle = '#1f2a44'; rr(c, -s * .2, -s * .21, s * .4, s * .22, s * .08); c.fill(); // mặt
+  if (o.dead) { c.strokeStyle = '#ff8a8a'; c.lineWidth = s * .03; [-1, 1].forEach(sd => { const ex = sd * s * .08, ey = -s * .1; c.beginPath(); c.moveTo(ex - s * .03, ey - s * .03); c.lineTo(ex + s * .03, ey + s * .03); c.moveTo(ex + s * .03, ey - s * .03); c.lineTo(ex - s * .03, ey + s * .03); c.stroke(); }); }
+  else {
+    const blink = (t % 3.6) > 3.45 ? .25 : 1;
+    [-1, 1].forEach(sd => {
+      const ex = sd * s * .08, ey = -s * .1, gl = c.createRadialGradient(ex, ey, 0, ex, ey, s * .1);
+      gl.addColorStop(0, 'rgba(255,154,60,.55)'); gl.addColorStop(1, 'rgba(255,154,60,0)'); c.fillStyle = gl; c.beginPath(); c.arc(ex, ey, s * .1, 0, 6.283); c.fill();
+      c.fillStyle = B.eye; c.beginPath(); c.ellipse(ex, ey, s * .042, s * .042 * blink * (o.won ? 1.3 : 1), 0, 0, 6.283); c.fill();
+    });
+  }
+  c.fillStyle = 'rgba(255,255,255,.35)'; rr(c, -s * .12, s * .08, s * .24, s * .1, s * .04); c.fill(); // bảng ngực
+  c.restore();
+  // ăng-ten (vẽ theo hệ màn hình, gốc gắn với thân)
+  const bx = (s * .19) * ca - (s * .2) * sa, by = (s * .19) * sa + (s * .2) * ca;
+  const sway = Math.sin(t * 3.2) * s * .05 + (o.lean || 0) * s * (o.dead ? 0 : 1) + (o.dead ? s * .1 : 0);
+  c.strokeStyle = '#4a5568'; c.lineWidth = Math.max(1.5, s * .035); c.lineCap = 'round';
+  c.beginPath(); c.moveTo(bx, by); c.lineTo(bx + sway, by - s * (o.dead ? .2 : .32)); c.stroke();
+  c.fillStyle = o.dead ? '#777' : B.eye; c.beginPath(); c.arc(bx + sway, by - s * (o.dead ? .2 : .32), s * .055, 0, 6.283); c.fill();
+  c.restore();
+}
+function drawScene(c, W, H, S, t, shake) {
+  const L = layoutFor(W, H, S.w, S.h), cell = L.cell, B = CONFIG.board, ox = L.ox, oy = L.oy, pad = cell * .14;
+  const open = !!S.forceOpen || S.collected >= S.total;
+  c.save();
+  if (shake > .1) c.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake);
+  c.fillStyle = 'rgba(120,90,30,.14)'; rr(c, ox - pad, oy - pad + cell * .07, cell * S.w + pad * 2, cell * S.h + pad * 2, cell * .28); c.fill();
+  c.fillStyle = B.tray; rr(c, ox - pad, oy - pad, cell * S.w + pad * 2, cell * S.h + pad * 2, cell * .28); c.fill();
+  for (let y = 0; y < S.h; y++) for (let x = 0; x < S.w; x++) {
+    const px = ox + x * cell, py = oy + y * cell, ch = S.tiles[y][x];
+    if (ch !== '#') { c.fillStyle = ((x + y) & 1) ? B.floorB : B.floorA; rr(c, px + 1, py + 1, cell - 2, cell - 2, cell * .14); c.fill(); }
+    drawTile(c, ch, px, py, cell, t, S, x, y, ch === 'K' ? S.open : open);
+  }
+  S.bat.forEach(key => { const p = key.split(','); drawBattery(c, ox + (+p[0] + .5) * cell, oy + (+p[1] + .5) * cell, cell, t, +p[0] * 7 + +p[1]); });
+  if (S.crates) S.crates.forEach(cr => drawCrate(c, ox + cr.x * cell, oy + cr.y * cell, cell));
+  if (S.robot && S.robot.x !== undefined && S.robot.x !== null) {
+    const r = S.robot;
+    if (!(r.dead && r.dieT >= 1 && r.fade)) drawRobot(c, ox + (r.x + .5) * cell, oy + (r.y + .5) * cell, cell, r.ang, t, r);
+  }
+  drawParticles(c, L);
+  c.restore();
+  return L;
+}
+
+/* =====================================================================
+   8. TRẠNG THÁI GAME
+   ===================================================================== */
+const G = {
+  screen: 'start', level: null, from: 'map', custom: false, world: null, vis: null, run: null,
+  paused: false, modal: null, hints: 0, hint: null, target: { sec: 'main', owner: '', br: '' },
+  fnName: 'Hàm A', /* đổi theo ngôn ngữ ở loadLevel */ speed: CONFIG.defaultSpeed, shake: 0, time: 0
+};
+let P = { main: [], fn: [] };      // chương trình của người chơi
+let HIST = [];                     // lịch sử để hoàn tác
+const DRAFTS = {};                 // nháp chương trình theo màn (trong phiên chơi)
+let D = null;                      // trạng thái kéo-thả
+
+function speedT() { return CONFIG.speed[G.speed] || CONFIG.speed.normal; }
+
+/* ---------- Toast / banner / tip ---------- */
+let toastTimer = 0;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2200); }
+function showBanner(txt, kind) { const b = $('#banner'); b.textContent = txt; b.className = 'show ' + (kind || ''); }
+function hideBanner() { $('#banner').className = ''; }
+function showTip(txt) { $('#tip-text').textContent = txt; $('#tip').classList.add('show'); }
+function hideTip() { $('#tip').classList.remove('show'); }
+
+/* ---------- Thao tác với cây khối lệnh ---------- */
+function findBlock(id, lists) {
+  lists = lists || [P.main, P.fn];
+  for (const l of lists) for (const b of l) {
+    if (b.id === id) return b;
+    const sub = b.body ? [b.body] : b.then ? [b.then, b.else] : null;
+    if (sub) { const f = findBlock(id, sub); if (f) return f; }
+  }
+  return null;
+}
+function removeFrom(lists, id) {
+  for (const l of lists) for (let i = 0; i < l.length; i++) {
+    const b = l[i];
+    if (b.id === id) return l.splice(i, 1)[0];
+    const sub = b.body ? [b.body] : b.then ? [b.then, b.else] : null;
+    if (sub) { const f = removeFrom(sub, id); if (f) return f; }
+  }
+  return null;
+}
+function hasCall(b) { if (!b) return false; if (b.t === 'call') return true; return (b.body || []).concat(b.then || [], b.else || []).some(hasCall); }
+function getList(d) { if (!d.owner) return P[d.sec]; const b = findBlock(d.owner); return b ? b[d.br] : null; }
+function sameDesc(a, b) { return !!a && !!b && a.sec === b.sec && a.owner === b.owner && a.br === b.br; }
+function curTarget() { const d = G.target; if (!getList(d)) G.target = { sec: 'main', owner: '', br: '' }; return G.target; }
+function tokensOf(prog) { // duyệt tiền thứ tự – khớp với flattenTokens của engine
+  const out = [];
+  const walk = (list, sec, parent, br) => list.forEach(b => {
+    const i = out.length; out.push({ b, t: b.t, n: b.n, sec, parent, br });
+    if (b.body) walk(b.body, sec, i, 'body');
+    if (b.then) { walk(b.then, sec, i, 'then'); walk(b.else, sec, i, 'else'); }
+  });
+  walk(prog.main, 'main', -1, ''); walk(prog.fn, 'fn', -1, '');
+  return out;
+}
+function labelOf(t, n) { return t === 'repeat' ? T('Lặp {0} lần', n) : t === 'call' ? T('Gọi {0}', G.fnName) : T(BLOCKS[t].label); }
+
+function canEdit() {
+  const R = G.run;
+  if (R.status === 'running') { toast(T('Đang chạy – bấm Dừng hoặc Đặt lại để chỉnh sửa')); return false; }
+  if (R.status !== 'idle') resetRun();
+  return true;
+}
+function pushHist() { HIST.push(JSON.stringify(P)); if (HIST.length > 200) HIST.shift(); }
+function editDone() {
+  G.hint = null;
+  if (!G.custom) DRAFTS[G.level.id] = { P: clone(P), fn: G.fnName };
+  renderProg(); updateHud();
+}
+function canAddMore() {
+  if (countBlocks(P) >= G.level.max) { toast(T('Đã hết khối! Tối đa {0} khối', G.level.max)); const c = $('#h-blk'); c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash'); Snd.play('miss'); return false; }
+  return true;
+}
+function addToTarget(type) {
+  if (!canEdit() || !canAddMore()) return;
+  const d = curTarget();
+  if (type === 'call' && d.sec === 'fn') { toast(T('Hàm không được tự gọi lại chính nó')); return; }
+  pushHist();
+  const b = mkBlock(type), L = getList(d); L.push(b);
+  if (b.body) G.target = { sec: d.sec, owner: b.id, br: 'body' };
+  else if (b.then) G.target = { sec: d.sec, owner: b.id, br: 'then' };
+  editDone(); Snd.play('add');
+  const e = $('#prog .blk[data-id="' + b.id + '"]'); if (e) scrollProgTo(e);
+}
+function removeBlock(id) {
+  if (!canEdit()) return;
+  pushHist(); removeFrom([P.main, P.fn], id); curTarget(); editDone(); Snd.play('remove');
+}
+function undo() {
+  if (G.screen !== 'game') return;
+  if (!HIST.length) { toast(T('Không còn gì để hoàn tác')); return; }
+  if (!canEdit()) return;
+  P = JSON.parse(HIST.pop()); curTarget(); editDone(); Snd.play('remove');
+}
+
+/* =====================================================================
+   9. HIỂN THỊ CHƯƠNG TRÌNH & BẢNG CÔNG CỤ
+   ===================================================================== */
+function descOf(L) { return { sec: L.dataset.sec, owner: L.dataset.owner, br: L.dataset.br }; }
+function describeTarget() {
+  const d = curTarget();
+  if (!d.owner) return d.sec === 'fn' ? T('vào hàm') : T('vào chương trình chính');
+  const b = findBlock(d.owner);
+  return b ? (b.body ? T('vào trong khối {0}', b.t === 'repeat' ? T('Lặp') : T('Lặp đến khi')) : d.br === 'then' ? T('vào nhánh "thì"') : T('vào nhánh "không thì"')) : '';
+}
+function buildTools() {
+  const box = $('#tools'); box.innerHTML = '';
+  G.level.allow.forEach(t => {
+    const def = BLOCKS[t], b = el('div', 'blk g-' + def.group);
+    b.dataset.type = t;
+    b.innerHTML = '<div class="blk-head"><span class="ic">' + ICON[t] + '</span><span class="lb">' + esc(t === 'repeat' ? T('Lặp N lần') : t === 'call' ? T('Gọi {0}', G.fnName) : T(def.label)) + '</span></div>';
+    box.appendChild(b);
+  });
+}
+function blockEl(b) {
+  const def = BLOCKS[b.t], e = el('div', 'blk g-' + def.group + (def.container ? ' container' : ''));
+  e.dataset.id = b.id;
+  if (G.hint && G.hint.badId === b.id) e.classList.add('bad');
+  const h = el('div', 'blk-head');
+  let inner = '<span class="ic">' + ICON[b.t] + '</span>';
+  if (b.t === 'repeat') inner += '<span class="lb">' + T('Lặp') + '</span><span class="rep"><button class="mini" data-act="dec" aria-label="' + T('Giảm') + '">−</button><b>' + b.n + '</b><button class="mini" data-act="inc" aria-label="' + T('Tăng') + '">+</button></span><span class="lb">' + T('lần') + '</span>';
+  else if (b.t === 'call') inner += '<span class="lb call-lb">' + esc(T('Gọi {0}', G.fnName)) + '</span>';
+  else inner += '<span class="lb">' + T(def.label) + '</span>';
+  h.innerHTML = inner; e.appendChild(h);
+  if (def.container) {
+    const body = el('div', 'blk-body'), sec = e._sec;
+    return { e, body, h };
+  }
+  return { e };
+}
+function buildBlock(b, sec) {
+  const r = blockEl(b), e = r.e;
+  if (r.body) {
+    if (b.body) r.body.appendChild(listEl(b.body, { sec, owner: b.id, br: 'body' }));
+    else {
+      r.body.appendChild(el('div', 'lbl', T('thì')));
+      r.body.appendChild(listEl(b.then, { sec, owner: b.id, br: 'then' }));
+      r.body.appendChild(el('div', 'lbl', T('không thì')));
+      r.body.appendChild(listEl(b.else, { sec, owner: b.id, br: 'else' }));
+    }
+    e.appendChild(r.body); e.appendChild(el('div', 'blk-foot'));
+  }
+  return e;
+}
+function listEl(list, d) {
+  const L = el('div', 'blist' + (list.length ? '' : ' empty'));
+  L.dataset.sec = d.sec; L.dataset.owner = d.owner; L.dataset.br = d.br;
+  if (sameDesc(d, G.target)) L.classList.add('active');
+  list.forEach(b => L.appendChild(buildBlock(b, d.sec)));
+  if (G.hint && G.hint.kind === 'next' && sameDesc(d, G.hint.desc)) {
+    const g = el('div', 'hghost g-' + BLOCKS[G.hint.want].group, ICON[G.hint.want] + ' ' + esc(labelOf(G.hint.want, G.hint.n)));
+    L.appendChild(g);
+  }
+  L.appendChild(el('div', 'slot', list.length ? T('＋ thêm vào đây') : T('Chạm hoặc kéo khối vào đây')));
+  return L;
+}
+function renderProg() {
+  const box = $('#prog'), keep = box.scrollTop; box.innerHTML = '';
+  [['main', T('Chương trình chính')]].concat(G.level.allow.indexOf('call') >= 0 ? [['fn', 'fn']] : []).forEach(([sec, title]) => {
+    const s = el('div', 'psec'), h = el('div', 'psec-h');
+    if (sec === 'main') h.innerHTML = '<span>▶ ' + title + '</span>';
+    else h.innerHTML = '<span>' + T('ƒ Hàm:') + '</span><input class="fn-name" maxlength="12" value="' + esc(G.fnName) + '" aria-label="' + T('Tên hàm') + '">';
+    h.innerHTML += '<span class="cnt">' + T('{0} khối', countList(P[sec])) + '</span>';
+    s.appendChild(h); s.appendChild(listEl(P[sec], { sec, owner: '', br: '' })); box.appendChild(s);
+  });
+  box.scrollTop = keep; markCurrent();
+  $('#tools-info').textContent = T('thêm {0}', describeTarget());
+  $$('#tools .blk').forEach(b => b.classList.toggle('hint-glow', !!(G.hint && G.hint.want === b.dataset.type)));
+}
+/* Chỉ cuộn bên trong khung chương trình – không bao giờ cuộn trang/khung chứa bàn cờ */
+function scrollProgTo(e) {
+  const box = $('#prog'), head = e.querySelector('.blk-head') || e;
+  const b = box.getBoundingClientRect(), r = head.getBoundingClientRect();
+  if (r.top < b.top + 6) box.scrollTop -= (b.top + 6 - r.top);
+  else if (r.bottom > b.bottom - 6) box.scrollTop += (r.bottom - (b.bottom - 6));
+}
+function markCurrent() {
+  $$('#prog .running').forEach(e => e.classList.remove('running'));
+  const id = G.run && G.run.cur; if (!id) return;
+  const e = $('#prog .blk[data-id="' + id + '"]');
+  if (e) { e.classList.add('running'); scrollProgTo(e); }
+}
+function updateHud() {
+  if (!G.level || !G.world) return;
+  const used = countBlocks(P), max = G.level.max, lv = G.level;
+  $('#h-bat').textContent = '🔋 ' + G.vis.collected + '/' + G.world.total;
+  $('#h-blk').textContent = '🧩 ' + used + '/' + max;
+  $('#h-stp').textContent = '👣 ' + G.run.steps;
+  $$('#tools .blk').forEach(b => b.classList.toggle('off', used >= max));
+  const hb = $('#b-hint');
+  if (!lv.solProg) hb.style.display = 'none'; else { hb.style.display = ''; hb.textContent = T('💡 Gợi ý ({0})', CONFIG.maxHints - G.hints); hb.disabled = G.hints >= CONFIG.maxHints; }
+  $('#h-goal').textContent = lv.par ? T('Mục tiêu 3★: ≤{0} khối · ≤{1} bước', lv.par.blocks, Math.ceil(lv.par.steps * CONFIG.star.threeStepsFactor)) : T('Màn tự tạo');
+  updateCtrl();
+}
+function updateCtrl() {
+  const R = G.run, rb = $('#b-run');
+  if (R.status === 'running') rb.textContent = R.mode === 'step' ? T('▶ Chạy tiếp') : T('⏹ Dừng');
+  else rb.textContent = R.status === 'idle' ? T('▶ Chạy') : T('▶ Chạy lại');
+  $$('#speedSeg button').forEach(b => b.classList.toggle('on', b.dataset.s === G.speed));
+  $('#b-undo').disabled = !HIST.length;
+}
+
+/* =====================================================================
+   10. KÉO – THẢ KHỐI LỆNH (chuột + cảm ứng)
+   ===================================================================== */
+function onDown(e) {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  const h = e.target.closest('.blk-head'); if (!h || e.target.closest('.mini') || G.paused) return;
+  const blk = h.closest('.blk'), fromTool = !!h.closest('#tools');
+  D = { x0: e.clientX, y0: e.clientY, cx: e.clientX, cy: e.clientY, fromTool, type: fromTool ? blk.dataset.type : null, id: fromTool ? null : blk.dataset.id, pid: e.pointerId, ptype: e.pointerType, active: false, el: blk, timer: 0, ghost: null, drop: null };
+  if (e.pointerType !== 'mouse') D.timer = setTimeout(() => { if (D && !D.active) beginDrag(); }, 230);
+}
+function onMove(e) {
+  if (!D || e.pointerId !== D.pid) return;
+  D.cx = e.clientX; D.cy = e.clientY;
+  if (!D.active) {
+    const dist = Math.hypot(D.cx - D.x0, D.cy - D.y0);
+    if (D.ptype === 'mouse') { if (dist > 5) beginDrag(); }
+    else if (dist > 10) { clearTimeout(D.timer); D = null; return; } // người dùng muốn cuộn trang
+  }
+  if (D && D.active) updateDrag();
+}
+function onUp(e) {
+  if (!D || e.pointerId !== D.pid) return;
+  clearTimeout(D.timer);
+  const d = D;
+  if (d.active) { const dr = d.drop; closeDrag(); if (dr) doDrop(d, dr); }
+  else { D = null; if (d.fromTool) addToTarget(d.type); else removeBlock(d.id); }
+}
+function onCancel(e) { if (D && e.pointerId === D.pid) { clearTimeout(D.timer); closeDrag(); } }
+function beginDrag() {
+  if (!D || G.run.status === 'running') { if (D) { clearTimeout(D.timer); D = null; toast(T('Đang chạy – bấm Dừng để chỉnh sửa')); } return; }
+  D.active = true;
+  const head = D.el.querySelector('.blk-head').cloneNode(true), g = el('div', 'blk drag-ghost ' + [...D.el.classList].find(c => c.indexOf('g-') === 0));
+  g.appendChild(head); document.body.appendChild(g); D.ghost = g;
+  if (!D.fromTool) D.el.classList.add('dragging');
+  Snd.play('pick'); updateDrag();
+}
+function computeDrop(x, y) {
+  let L = null; const stack = document.elementsFromPoint(x, y);
+  for (const n of stack) if (n.classList && n.classList.contains('blist')) { L = n; break; }
+  if (!L) for (const n of stack) if (n.classList && n.classList.contains('psec')) { L = n.querySelector(':scope > .blist'); break; }
+  if (!L) return null;
+  const d = descOf(L);
+  if (D.id && L.closest('.blk[data-id="' + D.id + '"]')) return null;           // không thả vào chính nó
+  const callIn = D.fromTool ? D.type === 'call' : hasCall(findBlock(D.id));
+  if (callIn && d.sec === 'fn') return null;                                    // hàm không gọi lại hàm
+  const kids = [...L.children].filter(k => k.classList.contains('blk') && k.dataset.id !== D.id);
+  let idx = 0;
+  for (const k of kids) { const r = k.getBoundingClientRect(); if (y > r.top + r.height / 2) idx++; else break; }
+  return { L, d, idx, kids };
+}
+function updateDrag() {
+  D.ghost.style.transform = 'translate(' + (D.cx + 10) + 'px,' + (D.cy + 6) + 'px)';
+  $$('.blist.drop-hover').forEach(l => l.classList.remove('drop-hover'));
+  const dr = computeDrop(D.cx, D.cy); D.drop = dr; const line = $('#dropLine');
+  if (!dr) { line.style.display = 'none'; return; }
+  const lr = dr.L.getBoundingClientRect(); let top;
+  if (!dr.kids.length) top = lr.top + 6;
+  else if (dr.idx < dr.kids.length) top = dr.kids[dr.idx].getBoundingClientRect().top - 3;
+  else top = dr.kids[dr.kids.length - 1].getBoundingClientRect().bottom + 1;
+  line.style.cssText = 'display:block;left:' + (lr.left + 6) + 'px;width:' + Math.max(20, lr.width - 12) + 'px;top:' + top + 'px';
+}
+function closeDrag() {
+  if (D) { clearTimeout(D.timer); if (D.ghost) D.ghost.remove(); if (D.el) D.el.classList.remove('dragging'); }
+  $('#dropLine').style.display = 'none'; D = null;
+}
+function doDrop(d, dr) {
+  if (!canEdit()) return;
+  if (d.fromTool) {
+    if (!canAddMore()) return;
+    pushHist(); const b = mkBlock(d.type), L = getList(dr.d); if (!L) return; L.splice(dr.idx, 0, b);
+    if (b.body) G.target = { sec: dr.d.sec, owner: b.id, br: 'body' };
+    else if (b.then) G.target = { sec: dr.d.sec, owner: b.id, br: 'then' };
+    else G.target = dr.d;
+  } else {
+    pushHist(); const blk = removeFrom([P.main, P.fn], d.id), L = getList(dr.d);
+    if (!blk || !L) { P = JSON.parse(HIST.pop()); return; }
+    L.splice(dr.idx, 0, blk);
+  }
+  curTarget(); editDone(); Snd.play('add');
+}
+
+/* =====================================================================
+   11. CHẠY CHƯƠNG TRÌNH (máy trạng thái theo delta time)
+   ===================================================================== */
+function resetRun() {
+  const lv = G.level, w = newWorld(lv);
+  G.world = w; G.shake = 0;
+  G.vis = { x: w.r.x, y: w.r.y, ang: w.r.d * 90, hop: 0, sq: 0, lean: 0, wheel: 0, bat: new Set(w.bat), collected: 0, open: false, doorT: 0, dead: false, won: false, dieT: 0,
+    step: 0, scale: 1, fall: false, fade: false, crates: [...w.crates].map(k => { const q = k.split(','); return { x: +q[0], y: +q[1] }; }) };
+  G.run = { status: 'idle', gen: null, ctx: null, mode: 'auto', tokens: 0, pending: null, wait: 0, anim: null, cur: null, steps: 0, consec: 0, after: null };
+  PART.length = 0; hideBanner(); markCurrent(); if (G.screen === 'game') updateHud();
+}
+function startRun(mode) {
+  if (G.paused) return; Snd.resume();
+  const R = G.run;
+  if (R.status === 'running') { if (mode === 'step') { R.mode = 'step'; R.tokens++; } return; }
+  if (R.status !== 'idle') resetRun();
+  if (!countList(P.main)) { toast(T('Hãy thêm khối lệnh vào chương trình trước!')); return; }
+  const ctx = { world: G.world, ticks: 0 }, R2 = G.run;
+  R2.ctx = ctx; R2.gen = runProgram(P, ctx); R2.status = 'running'; R2.mode = mode; R2.tokens = mode === 'step' ? 1 : 0;
+  G.hint = null; renderProg(); hideTip(); updateCtrl();
+}
+function onRunBtn() {
+  const R = G.run;
+  if (R.status === 'running') { if (R.mode === 'step') { R.mode = 'auto'; updateCtrl(); } else { resetRun(); renderProg(); } }
+  else startRun('auto');
+}
+function failRun(msg) { const R = G.run; R.status = 'ended'; R.cur = null; markCurrent(); showBanner(msg, 'warn'); Snd.play('miss'); updateCtrl(); }
+function endProgram() {
+  const R = G.run, w = G.world, t = w.tiles[w.r.y][w.r.x]; let m;
+  if (t === 'X' && w.collected < w.total) m = T('Robot đã tới cổng nhưng còn thiếu pin ({0}/{1}).', w.collected, w.total);
+  else if (w.collected < w.total) m = T('Chương trình đã chạy xong nhưng còn thiếu pin ({0}/{1}) – nhớ dùng khối «Nhặt pin».', w.collected, w.total);
+  else m = T('Chương trình đã chạy xong nhưng robot chưa tới cổng thoát.');
+  R.status = 'ended'; R.cur = null; markCurrent(); showBanner(m, 'warn'); Snd.play('miss'); updateCtrl();
+}
+function updateRun(dt) {
+  const R = G.run; if (!R) return;
+  if (R.after) { R.after.t -= dt; if (R.after.t <= 0) { const f = R.after.fn; R.after = null; f(); } return; }
+  if (R.status !== 'running') return;
+  if (R.anim) { stepAnim(dt); return; }
+  if (R.wait > 0) { R.wait -= dt; return; }
+  let guard = 0;
+  while (!R.anim && R.wait <= 0 && R.status === 'running' && guard++ < 60) {
+    let item = R.pending; R.pending = null;
+    if (!item) {
+      let r; try { r = R.gen.next(); } catch (e) { return failRun(T('Chương trình quá dài hoặc lặp vô hạn!')); }
+      if (r.done) return endProgram();
+      item = r.value;
+    }
+    R.cur = item.block.id; markCurrent();
+    if (item.kind === 'tick') {   // khối điều khiển (Lặp / Nếu / Gọi hàm)
+      if (++R.consec > 200) return failRun(T('Vòng lặp rỗng – không có hành động nào!'));
+      R.wait = R.consec > 6 ? 0 : speedT() * CONFIG.tickFactor; continue;
+    }
+    if (R.mode === 'step' && R.tokens <= 0) { R.pending = item; break; }  // chờ người chơi bấm "Bước"
+    if (R.mode === 'step') R.tokens--;
+    R.consec = 0; doAct(item.block);
+  }
+}
+const PHASE_W = { turn: .8, move: 1, slide: 1, tele: .9, push: .8, bump: .8, collect: .8, press: .7 };
+function doAct(block) {
+  const R = G.run;
+  if (R.steps >= CONFIG.maxSteps) return failRun(T('Robot đã đi quá {0} bước – hãy kiểm tra vòng lặp!', CONFIG.maxSteps));
+  R.steps++;
+  const out = stepWorld(G.world, block.t), T = speedT();
+  let W = 0; out.phases.forEach(p => { if (p.k !== 'die') W += PHASE_W[p.k] || 1; });
+  const durs = out.phases.map(p => p.k === 'die' ? .85 : Math.max(.03, T * (PHASE_W[p.k] || 1) / W));
+  R.anim = { phases: out.phases, durs, i: 0, t: 0, out };
+  beginPhase(out.phases[0]); updateHud();
+}
+function beginPhase(ph) {
+  const v = G.vis;
+  switch (ph.k) {
+    case 'turn': ph.a0 = v.ang; Snd.play('turn'); break;
+    case 'move': case 'slide':
+      Snd.play(ph.k === 'slide' ? 'slide' : 'step');
+      if (ph.crate) { ph._c = v.crates.find(q => q.x === ph.crate.from.x && q.y === ph.crate.from.y); Snd.play('push'); }
+      break;
+    case 'tele': Snd.play('tele'); burst(ph.from.x + .5, ph.from.y + .5, 14, ['#b9a4ff', '#fff'], 2.5, .6, .06, 0); break;
+    case 'bump': ph.bx = v.x; ph.by = v.y; Snd.play('bump'); G.shake = 6;
+      burst(v.x + .5 + ph.dx * .45, v.y + .5 + ph.dy * .45, 6, ['#fff', '#d7e3df'], 1.5, .4, .05, 2); break;
+    case 'collect':
+      if (ph.ok) { v.bat.delete(ph.x + ',' + ph.y); v.collected++; burst(ph.x + .5, ph.y + .5, 16, ['#ffd23f', '#fff3b0', '#ff9a3c'], 3.5, .8, .07, 4); Snd.play('collect'); }
+      else Snd.play('miss');
+      break;
+    case 'press':
+      if (ph.ok) { v.open = true; Snd.play(ph.first ? 'door' : 'press'); if (ph.first) G.world.tiles.forEach((row, y) => row.forEach((ch, x) => { if (ch === 'D') burst(x + .5, y + .5, 12, ['#ffe08a', '#fff'], 2.5, .8, .06, 3); })); }
+      else Snd.play('miss');
+      break;
+    case 'die':
+      v.dead = true; v.fall = ph.reason === 'hole'; G.shake = 10; Snd.play('die');
+      if (v.fall) burst(v.x + .5, v.y + .5, 10, ['#5b6b73', '#2f3b41'], 1.5, .7, .06, 1); else sparks(v.x + .5, v.y + .5, 26);
+      break;
+  }
+}
+function applyPhase(ph, p) {
+  const v = G.vis;
+  switch (ph.k) {
+    case 'turn': v.ang = ph.a0 + ph.delta * 90 * ease(p); break;
+    case 'move': case 'slide': {
+      const e = ph.k === 'slide' ? p : ease(p);
+      v.x = lerp(ph.from.x, ph.to.x, e); v.y = lerp(ph.from.y, ph.to.y, e);
+      v.hop = ph.k === 'move' ? Math.sin(p * Math.PI) * .05 : 0; v.wheel += .05; v.lean = Math.sin(p * Math.PI) * .05;
+      if (ph._c) { ph._c.x = lerp(ph.crate.from.x, ph.crate.to.x, e); ph._c.y = lerp(ph.crate.from.y, ph.crate.to.y, e); }
+      break;
+    }
+    case 'push': v.x = lerp(ph.from.x, ph.to.x, p); v.y = lerp(ph.from.y, ph.to.y, p); v.wheel += .03; break;
+    case 'tele':
+      if (p < .5) { v.x = ph.from.x; v.y = ph.from.y; v.scale = 1 - p * 2; } else { v.x = ph.to.x; v.y = ph.to.y; v.scale = (p - .5) * 2; }
+      break;
+    case 'bump': { const o = Math.sin(p * Math.PI) * .16; v.x = ph.bx + ph.dx * o; v.y = ph.by + ph.dy * o; break; }
+    case 'collect': case 'press': v.sq = Math.sin(p * Math.PI); break;
+    case 'die': v.dieT = p; if (v.fall) v.scale = 1 - p; break;
+  }
+}
+function finishPhase(ph) {
+  const v = G.vis; v.hop = 0; v.sq = 0; v.lean = 0; if (ph.k !== 'die') v.scale = 1;
+  if (ph.k === 'turn') v.ang = ph.a0 + ph.delta * 90;
+  else if (ph.k === 'move' || ph.k === 'slide' || ph.k === 'push' || ph.k === 'tele') {
+    v.x = ph.to.x; v.y = ph.to.y;
+    if (ph._c) {
+      if (ph.crate.vanish) { v.crates.splice(v.crates.indexOf(ph._c), 1); burst(ph.crate.to.x + .5, ph.crate.to.y + .5, 14, ['#ffd23f', '#ff9a3c', '#fff'], 3, .7, .07, 3); Snd.play('collect'); }
+      else { ph._c.x = ph.crate.to.x; ph._c.y = ph.crate.to.y; }
+    }
+  }
+  else if (ph.k === 'bump') { v.x = ph.bx; v.y = ph.by; }
+  else if (ph.k === 'die') { v.dieT = 1; if (v.fall) v.fade = true; }
+}
+function stepAnim(dt) {
+  const R = G.run, A = R.anim;
+  A.t += dt; let ph = A.phases[A.i];
+  while (ph && A.t >= A.durs[A.i]) { finishPhase(ph); A.t -= A.durs[A.i]; A.i++; ph = A.phases[A.i]; if (ph) beginPhase(ph); }
+  if (!ph) { R.anim = null; afterStep(A.out); return; }
+  applyPhase(ph, clamp(A.t / A.durs[A.i], 0, 1));
+}
+function afterStep(out) {
+  const R = G.run; G.vis.step = G.world.step; updateHud();
+  if (out.dead) { R.status = 'dead'; R.cur = null; markCurrent(); updateCtrl(); R.after = { t: .55, fn: () => gameOver(out.reason) }; return; }
+  if (out.won) {
+    R.status = 'won'; G.vis.won = true; R.cur = null; markCurrent(); updateCtrl();
+    confetti(G.world.w, G.world.h); burst(G.vis.x + .5, G.vis.y + .5, 24, ['#35c27e', '#fff', '#ffd23f'], 4, 1, .08, 3); Snd.play('win');
+    R.after = { t: 1.1, fn: showResult }; return;
+  }
+  R.wait = .01;
+}
+function updateVis(dt) {
+  const v = G.vis; if (!v) return;
+  v.doorT = lerp(v.doorT, v.open ? 1 : 0, Math.min(1, dt * 6));
+  G.shake = Math.max(0, G.shake - dt * 30);
+  if (v.won) v.hop = Math.abs(Math.sin(G.time * 7)) * .12;
+}
+
+/* =====================================================================
+   12. GỢI Ý
+   ===================================================================== */
+function useHint() {
+  const lv = G.level; if (!lv.solProg || G.paused) return;
+  if (G.run.status === 'running') { toast(T('Hãy bấm Dừng trước khi xin gợi ý')); return; }
+  if (G.run.status !== 'idle') { resetRun(); }
+  if (G.hints >= CONFIG.maxHints) { toast(T('Đã hết lượt gợi ý!')); return; }
+  const h = computeHint(lv.solProg, P);
+  if (h.type === 'done') { showTip(T('Chương trình của bạn đã khớp lời giải mẫu – bấm Chạy nào!')); return; }
+  G.hints++; Snd.play('hint');
+  const sol = tokensOf(lv.solProg), ub = tokensOf(P), tk = sol[h.idx];
+  if (h.type === 'next') {
+    const desc = tk.parent < 0 ? { sec: tk.sec, owner: '', br: '' } : { sec: tk.sec, owner: ub[tk.parent].b.id, br: tk.br };
+    G.hint = { kind: 'next', want: tk.t, n: tk.n, desc }; G.target = desc;
+    let where = tk.parent < 0 ? (tk.sec === 'fn' ? T('vào hàm') : T('vào cuối chương trình chính')) : T('vào trong khối «{0}»', labelOf(sol[tk.parent].t, sol[tk.parent].n)) + (tk.br === 'then' ? T(' (nhánh thì)') : tk.br === 'else' ? T(' (nhánh không thì)') : '');
+    showTip(T('💡 Thêm khối «{0}» {1}. (Ô nét đứt cho biết vị trí)', labelOf(tk.t, tk.n), where));
+  } else if (h.type === 'fix') {
+    G.hint = { kind: 'fix', want: tk.t, n: tk.n, badId: ub[h.idx].b.id };
+    showTip(T('💡 Khối thứ {0} (viền đỏ) chưa đúng – ở vị trí đó cần «{1}».', h.idx + 1, labelOf(tk.t, tk.n)));
+  } else {
+    G.hint = { kind: 'extra', badId: ub[h.idx] ? ub[h.idx].b.id : null };
+    showTip(T('💡 Chương trình có khối thừa (viền đỏ) – hãy xóa bớt.'));
+  }
+  renderProg(); updateHud();
+}
+
+/* =====================================================================
+   13. HỘP THOẠI, KẾT QUẢ, CHUYỂN MÀN
+   ===================================================================== */
+function openModal(html, binds) {
+  const m = $('#modal'); m.innerHTML = '<div class="card">' + html + '</div>'; m.classList.add('show'); G.modal = true;
+  Object.keys(binds || {}).forEach(sel => { const b = $(sel, m); if (b) b.onclick = () => { Snd.play('ui'); binds[sel](); }; });
+}
+function closeModal() { const m = $('#modal'); m.classList.remove('show'); m.innerHTML = ''; G.modal = null; }
+function levelIndex() { return LEVELS.indexOf(G.level); }
+function gameOver(reason) {
+  openModal('<h2>' + T('💥 Robot hỏng rồi!') + '</h2><p>' + (reason === 'spike' ? T('Robot chạm vào gai điện.') : reason === 'hole' ? T('Robot rơi xuống hố.') : T('Robot đi ra khỏi lưới.')) + ' ' + T('Đừng nản – thử lại ngay nhé!') + '</p>' +
+    '<div class="btns"><button class="btn primary" id="m-again">' + T('↺ Chơi lại') + '</button><button class="btn" id="m-map">🗺 ' + (G.from === 'editor' ? T('Về trình soạn') : T('Bản đồ')) + '</button></div>',
+    { '#m-again': () => { closeModal(); resetRun(); renderProg(); }, '#m-map': () => { closeModal(); leaveGame(); } });
+}
+function showResult() {
+  const lv = G.level, R = G.run, blocks = countBlocks(P), steps = R.steps;
+  let ev, rec = false;
+  if (G.custom) ev = { stars: 3, score: 0 };
+  else {
+    ev = evaluate(lv, blocks, steps, G.hints);
+    const prev = SAVE.levels[lv.id]; rec = !prev || blocks < prev.blocks;
+    SAVE.levels[lv.id] = { stars: Math.max(prev ? prev.stars : 0, ev.stars), blocks: prev ? Math.min(prev.blocks, blocks) : blocks, steps: prev ? Math.min(prev.steps, steps) : steps, score: Math.max(prev ? prev.score : 0, ev.score) };
+    SAVE.high = Math.max(SAVE.high || 0, totalScore()); persist();
+  }
+  const idx = levelIndex(), hasNext = !G.custom && idx < LEVELS.length - 1;
+  const all = !G.custom && totalStars() > 0 && LEVELS.every((_, i) => levelStars(i) > 0);
+  let stars = ''; for (let i = 0; i < 3; i++) stars += '<span class="' + (i < ev.stars ? 'on' : 'off') + '" style="animation-delay:' + (.15 + i * .25) + 's">★</span>';
+  openModal('<h2>🎉 ' + (G.custom ? T('Hoàn thành màn tự tạo!') : T('Hoàn thành màn {0}!', lv.id)) + '</h2>' +
+    (G.custom ? '' : '<div class="stars">' + stars + '</div>') +
+    (rec ? '<div class="record">' + T('KỶ LỤC MỚI!') + '</div>' : '') +
+    '<div class="stats"><div>' + T('Khối đã dùng') + '<b>' + blocks + '/' + lv.max + '</b></div><div>' + T('Số bước') + '<b>' + steps + '</b></div>' +
+    (G.custom ? '' : '<div>' + T('Sao') + '<b>' + ev.stars + '★</b></div><div>' + T('Điểm') + '<b>' + ev.score + '</b></div>') + '</div>' +
+    (!G.custom && G.hints ? '<p>' + T('Đã dùng gợi ý nên bị trừ 1 sao.') + '</p>' : '') +
+    (!G.custom && ev.stars < 3 ? '<p>' + T('Thử lại với ≤{0} khối và ≤{1} bước để đạt 3★.', lv.par.blocks, Math.ceil(lv.par.steps * CONFIG.star.threeStepsFactor)) + '</p>' : '') +
+    (all ? '<p><b>' + T('🏆 Bạn đã hoàn thành cả {0} màn!', LEVELS.length) + '</b></p>' : '') +
+    '<div class="btns"><button class="btn" id="m-again">' + T('↺ Chơi lại') + '</button>' +
+    (hasNext ? '<button class="btn primary" id="m-next">' + T('Màn tiếp theo ▶') + '</button>' : '<button class="btn primary" id="m-map">🗺 ' + (G.custom ? T('Về trình soạn') : T('Bản đồ')) + '</button>') + '</div>',
+    {
+      '#m-again': () => { closeModal(); loadLevel(lv, G.from); },
+      '#m-next': () => { closeModal(); loadLevel(LEVELS[idx + 1], 'map'); },
+      '#m-map': () => { closeModal(); leaveGame(); }
+    });
+}
+function togglePause() {
+  if (G.screen !== 'game') return;
+  if (G.paused) { G.paused = false; closeModal(); $('#g-pause').textContent = '⏸'; return; }
+  if (G.modal) return;
+  G.paused = true; $('#g-pause').textContent = '▶';
+  openModal('<h2>' + T('⏸ Tạm dừng') + '</h2><p>' + T('Nghỉ một chút nhé. Nhấn <kbd>P</kbd> để tiếp tục.') + '</p><div class="btns"><button class="btn primary" id="m-res">' + T('▶ Tiếp tục') + '</button><button class="btn" id="m-rst">' + T('↺ Đặt lại') + '</button><button class="btn" id="m-map">' + T('🗺 Thoát') + '</button></div>',
+    { '#m-res': togglePause, '#m-rst': () => { togglePause(); resetRun(); renderProg(); }, '#m-map': () => { togglePause(); leaveGame(); } });
+}
+function showSettings() {
+  const sw = (id, on, label) => '<button class="switch' + (on ? ' on' : '') + '" id="' + id + '" role="switch" aria-checked="' + !!on + '" aria-label="' + label + '"><i></i></button>';
+  const speeds = [['slow', T('🐢 Chậm')], ['normal', T('Vừa')], ['fast', T('🐇 Nhanh')]].map(q => '<button data-s="' + q[0] + '" class="' + (SAVE.speed === q[0] ? 'on' : '') + '">' + q[1] + '</button>').join('');
+  openModal('<h2>' + T('⚙ Cài đặt') + '</h2>' +
+    '<div class="set-row"><span>' + T('🌐 Ngôn ngữ') + '</span><span class="seg" id="s-lang"><button data-l="vi" class="' + (LANG === 'vi' ? 'on' : '') + '">Tiếng Việt</button><button data-l="en" class="' + (LANG === 'en' ? 'on' : '') + '">English</button></span></div>' +
+    '<div class="set-row"><span>' + T('🔊 Âm thanh') + '</span>' + sw('s-sound', SAVE.sound, T('Âm thanh')) + '</div>' +
+    '<div class="set-row"><span>' + T('🔉 Âm lượng') + ' <b id="s-vol-n">' + SAVE.volume + '%</b></span><input type="range" id="s-vol" min="0" max="100" step="5" value="' + SAVE.volume + '" aria-label="' + T('Âm lượng') + '" style="flex:1;max-width:170px"></div>' +
+    '<div class="set-row"><span>' + T('🔓 Mở khóa tất cả các màn') + '<small>' + T('Chơi màn nào cũng được, không cần qua màn trước') + '</small></span>' + sw('s-unlock', SAVE.unlockAll, T('Mở khóa tất cả các màn')) + '</div>' +
+    '<div class="set-row"><span>' + T('⏱ Tốc độ chạy mặc định') + '</span><span class="seg" id="s-speed">' + speeds + '</span></div>' +
+    '<div class="btns"><button class="btn warn" id="s-reset">' + T('🗑 Xóa tiến độ') + '</button><button class="btn primary" id="m-ok">' + T('Xong') + '</button></div>',
+    {
+      '#s-sound': () => { SAVE.sound = !SAVE.sound; persist(); updateSndBtns(); Snd.resume(); $('#s-sound').classList.toggle('on', SAVE.sound); },
+      '#s-unlock': () => { SAVE.unlockAll = !SAVE.unlockAll; persist(); $('#s-unlock').classList.toggle('on', SAVE.unlockAll); if (G.screen === 'map') renderMap(); updateStart(); toast(SAVE.unlockAll ? T('Đã mở khóa tất cả các màn') : T('Đã khóa lại theo tiến độ')); },
+      '#s-reset': () => {
+        const b = $('#s-reset');
+        if (b.dataset.arm !== '1') { b.dataset.arm = '1'; b.textContent = T('⚠ Bấm lần nữa để xác nhận'); return; }
+        SAVE.levels = {}; SAVE.high = 0; persist(); Object.keys(DRAFTS).forEach(k => delete DRAFTS[k]);
+        updateStart(); if (G.screen === 'map') renderMap(); closeModal(); toast(T('Đã xóa toàn bộ tiến độ'));
+      },
+      '#m-ok': closeModal
+    });
+  const vol = $('#s-vol'); let volT = 0;
+  vol.oninput = () => { SAVE.volume = +vol.value; $('#s-vol-n').textContent = SAVE.volume + '%'; Snd.init(); Snd.applyVol(); persist(); clearTimeout(volT); volT = setTimeout(() => { Snd.resume(); Snd.play('collect'); }, 120); };
+  $$('#s-lang button').forEach(b => b.onclick = () => { if (b.dataset.l !== LANG) { setLang(b.dataset.l); showSettings(); } });
+  $$('#s-speed button').forEach(b => b.onclick = () => { G.speed = b.dataset.s; SAVE.speed = G.speed; persist(); $$('#s-speed button').forEach(x => x.classList.toggle('on', x === b)); });
+}
+function showHelp() {
+  openModal('<h2>' + T('❓ Cách chơi') + '</h2><ul>' + '<li>' + T('Kéo (hoặc chạm) khối lệnh vào khung chương trình, rồi bấm <b>Chạy</b>.') + '</li>' + '<li>' + T('Nhặt hết 🔋 bằng khối <b>Nhặt pin</b> khi đứng đúng ô, rồi tới cổng 🚪.') + '</li>' + '<li>' + T('Tránh gai điện ⚡ và đừng ra khỏi lưới. Băng chuyền đẩy robot 1 ô sau mỗi bước.') + '</li>' + '<li>' + T('Nút 🔘 mở cửa khóa 🔒: đứng lên nút rồi dùng khối <b>Bấm nút</b>.') + '</li>' + '<li>' + T('Chạm khối trong chương trình để xóa, kéo để đổi chỗ. Chạm vào ô «thêm vào đây» để chọn nơi chèn (trong Lặp, Nếu, Hàm).') + '</li>' + '<li>' + T('Phím: <kbd>Enter</kbd> chạy · <kbd>Space</kbd> bước · <kbd>R</kbd> đặt lại · <kbd>Z</kbd> hoàn tác · <kbd>P</kbd> tạm dừng · <kbd>H</kbd> gợi ý.') + '</li>' + '<li>' + T('Ít khối + ít bước hơn = nhiều sao. Gợi ý (tối đa 3 lần) sẽ trừ 1 sao.') + '</li>' + '<li>' + T('<b>Ô đặc biệt:</b> 🌀 bàn xoay (quay phải 90°) · ①②③④ cổng dịch chuyển · 📦 hộp đẩy (lấp được gai) · sàn nứt chỉ đi 1 lần · gai nhấp nháy bật/tắt theo từng hành động · 🧊 băng trơn (trượt tới khi gặp vật cản).') + '</li>' + '</ul><div class="btns"><button class="btn primary" id="m-ok">' + T('Đã hiểu!') + '</button></div>', { '#m-ok': closeModal });
+}
+/* Đổi ngôn ngữ: lưu lại rồi vẽ lại màn hình hiện tại */
+function setLang(l) {
+  const old = LANG; LANG = l === 'en' ? 'en' : 'vi'; SAVE.lang = LANG; persist();
+  if (old !== LANG) { // tên hàm mặc định đổi theo ngôn ngữ
+    const defs = { vi: ['Hàm A', 'Hàm'], en: [EN['Hàm A'], EN['Hàm']] };
+    const i = defs[old].indexOf(G.fnName); if (i >= 0) G.fnName = defs[LANG][i];
+  }
+  applyLang(); updateStart();
+  if (G.screen === 'map') renderMap();
+  if (G.screen === 'game' && G.level) {
+    gameTitles(); buildTools(); renderProg(); updateHud(); updateCtrl();
+    if (G.level.intro && $('#tip').classList.contains('show')) showTip(T(G.level.intro));
+  }
+  if (G.screen === 'editor') edRefreshUI();
+}
+function gameTitles() {
+  const lv = G.level; if (!lv) return;
+  $('#g-title').textContent = G.custom ? T('Màn tự tạo') : T('Màn {0} · {1}', lv.id, T(lv.name));
+  $('#g-sub').textContent = G.custom ? lv.w + '×' + lv.h : T('{0} · lưới {1}×{2}', T(ZONES[lv.z].name), lv.w, lv.h);
+}
+function leaveGame() { G.paused = false; $('#g-pause').textContent = '⏸'; show(G.from === 'editor' ? 'editor' : 'map'); }
+function loadLevel(lv, from) {
+  closeModal(); closeDrag();
+  G.level = lv; G.from = from || 'map'; G.custom = lv.id === 'custom'; G.hints = 0; G.hint = null; G.paused = false; $('#g-pause').textContent = '⏸';
+  const d = DRAFTS[lv.id];
+  if (d && !G.custom) { P = clone(d.P); G.fnName = d.fn; } else { P = { main: [], fn: [] }; G.fnName = T('Hàm A'); }
+  HIST = []; G.target = { sec: 'main', owner: '', br: '' };
+  show('game'); resetRun(); buildTools(); renderProg();
+  gameTitles();
+  if (lv.intro) showTip(T(lv.intro)); else hideTip();
+  updateHud(); fitAll();
+}
+
+/* =====================================================================
+   14. MÀN HÌNH BẮT ĐẦU, BẢN ĐỒ
+   ===================================================================== */
+function show(name) {
+  G.screen = name;
+  $$('.screen').forEach(s => s.classList.toggle('active', s.id === 'scr-' + name));
+  if (name === 'map') renderMap();
+  if (name === 'start') updateStart();
+  if (name === 'editor') edRefreshUI();
+  fitAll();
+}
+function updateStart() { $('#st-max').textContent = maxStars(); $('#st-stars').textContent = totalStars(); $('#st-score').textContent = Math.max(SAVE.high || 0, totalScore()); }
+function updateSndBtns() { $$('.snd-btn').forEach(b => b.textContent = SAVE.sound ? '🔊' : '🔇'); }
+function renderMap() {
+  const box = $('#map-body'); box.innerHTML = ''; let focusBtn = null;
+  $('#map-sub').textContent = '⭐ ' + totalStars() + '/' + maxStars() + ' · ' + T('Điểm: {0}', totalScore()) + (SAVE.unlockAll ? ' · ' + T('🔓 đã mở khóa tất cả') : '');
+  ZONES.forEach((z, zi) => {
+    const zone = el('div', 'zone', '<h3>' + T('Khu {0} · {1}', zi + 1, T(z.name)) + '</h3><p>' + T(z.desc) + '</p>'), grid = el('div', 'lv-grid');
+    LEVELS.forEach((lv, i) => {
+      if (lv.z !== zi) return;
+      const st = levelStars(i), ok = isUnlocked(i);
+      const b = el('button', 'lv ' + (!ok ? 'locked' : st ? '' : 'todo'));
+      b.innerHTML = ok ? '<span class="n">' + lv.id + '</span><span class="s">' + (st ? '★'.repeat(st) + '<i>' + '★'.repeat(3 - st) + '</i>' : '') + '</span><span class="d">' + lv.w + '×' + lv.h + '</span>'
+        : '<span class="n">🔒</span><span class="s"></span><span class="d">' + lv.id + '</span>';
+      if (ok) b.onclick = () => { Snd.resume(); Snd.play('ui'); loadLevel(lv, 'map'); };
+      if (ok && !st && !focusBtn) focusBtn = b;
+      grid.appendChild(b);
+    });
+    zone.appendChild(grid); box.appendChild(zone);
+  });
+  if (focusBtn) { const br = box.getBoundingClientRect(), fr = focusBtn.getBoundingClientRect(); box.scrollTop += fr.top - br.top - 90; }
+}
+function drawHero(c, t) {
+  c.setTransform(2, 0, 0, 2, 0, 0); c.clearRect(0, 0, 220, 170);
+  c.fillStyle = '#cdeee2'; rr(c, 20, 112, 180, 40, 20); c.fill();
+  drawBattery(c, 40, 78 + Math.sin(t * 2) * 4, 56, t, 1); drawBattery(c, 180, 70 + Math.sin(t * 2 + 2) * 4, 56, t, 3);
+  drawRobot(c, 110, 88 + Math.sin(t * 2.5) * 2, 96, Math.sin(t * .8) * 14, t, { hop: Math.abs(Math.sin(t * 2.5)) * .03, wheel: t });
+}
+
+/* =====================================================================
+   15. TRÌNH SOẠN MÀN (tùy chọn) + MÃ CHIA SẺ
+   ===================================================================== */
+const ED_TOOLS = [['wall', '▦ Tường'], ['bat', '🔋 Pin'], ['spike', '⚡ Gai'], ['exit', '🚪 Cổng'], ['btn', '🔘 Nút'], ['door', '🔒 Cửa'], ['cu', '⬆ Băng'], ['cr', '➡ Băng'], ['cd', '⬇ Băng'], ['cl', '⬅ Băng'], ['turn', '🌀 Bàn xoay'], ['tp1', '① Dịch chuyển'], ['tp2', '② Dịch chuyển'], ['crate', '📦 Hộp'], ['frag', '▒ Sàn nứt'], ['pa', '⚡ Gai chẵn'], ['pb', '⚡ Gai lẻ'], ['ice', '🧊 Băng'], ['robot', '🤖 Robot'], ['erase', '🧽 Xóa']];
+const ED_TILE = { turn: 'O', tp1: '1', tp2: '2', frag: 'F', pa: 'P', pb: 'Q', ice: 'I' };
+const CODE_LET = { move: 'm', left: 'l', right: 'r', collect: 'c', press: 'p', repeat: 'n', ifwall: 'i', call: 'f', ifspike: 's', untilwall: 'u', ifbat: 'b' };
+let E = null, edTool = 'wall', edLast = '', edDown = false;
+function edNew(w, h) {
+  E = { w, h, tiles: [], bat: new Set(), crates: new Set(), robot: { x: 0, y: h - 1 }, dir: 1, max: 20, allow: { move: 1, left: 1, right: 1, collect: 1, repeat: 1, press: 1 } };
+  for (let y = 0; y < h; y++) E.tiles.push(new Array(w).fill('.'));
+  E.tiles[0][w - 1] = 'X'; E.bat.add(((w >> 1)) + ',' + (h >> 1));
+}
+function edResize(w, h) {
+  const t = [];
+  for (let y = 0; y < h; y++) { const r = []; for (let x = 0; x < w; x++) r.push(y < E.h && x < E.w ? E.tiles[y][x] : '.'); t.push(r); }
+  E.tiles = t; E.w = w; E.h = h;
+  const inside = k => { const p = k.split(','); return +p[0] < w && +p[1] < h; };
+  E.bat = new Set([...E.bat].filter(inside)); E.crates = new Set([...E.crates].filter(inside));
+  if (E.robot && (E.robot.x >= w || E.robot.y >= h)) E.robot = null;
+}
+function edApply(tool, x, y) {
+  const key = x + ',' + y, T = E.tiles, isR = E.robot && E.robot.x === x && E.robot.y === y;
+  const clearRobot = () => { if (isR) E.robot = null; };
+  const setTile = ch => { T[y][x] = ch; E.crates.delete(key); };
+  if (tool === 'wall' || tool === 'spike' || tool === 'door') { setTile({ wall: '#', spike: 'S', door: 'D' }[tool]); E.bat.delete(key); clearRobot(); }
+  else if (tool === 'bat') { if ('#SD'.indexOf(T[y][x]) < 0) { if (E.bat.has(key)) E.bat.delete(key); else E.bat.add(key); } }
+  else if (tool === 'exit') { E.tiles.forEach(r => r.forEach((c, i) => { if (c === 'X') r[i] = '.'; })); setTile('X'); clearRobot(); }
+  else if (tool === 'btn') { setTile('K'); clearRobot(); }
+  else if (tool[0] === 'c') { setTile('^>v<'['urdl'.indexOf(tool[1])]); clearRobot(); }
+  else if (ED_TILE[tool]) { setTile(ED_TILE[tool]); clearRobot(); }
+  else if (tool === 'crate') { if (isR) return; T[y][x] = '.'; if (E.crates.has(key)) E.crates.delete(key); else E.crates.add(key); }
+  else if (tool === 'robot') { if (isR) E.dir = (E.dir + 1) % 4; else { setTile('.'); E.robot = { x, y }; } edRefreshUI(); }
+  else if (tool === 'erase') { setTile('.'); E.bat.delete(key); clearRobot(); }
+}
+function edBuildLevel() {
+  if (!E.robot) { toast(T('Hãy đặt robot lên bản đồ')); return null; }
+  if (!E.tiles.some(r => r.indexOf('X') >= 0)) { toast(T('Hãy đặt cổng thoát 🚪')); return null; }
+  const rows = [], extra = [];
+  for (let y = 0; y < E.h; y++) {
+    let row = '';
+    for (let x = 0; x < E.w; x++) {
+      let ch = E.tiles[y][x]; const b = E.bat.has(x + ',' + y), r = E.robot && E.robot.x === x && E.robot.y === y;
+      const cr = E.crates.has(x + ',' + y);
+      if (r) ch = b ? 'r' : 'R'; else if (cr) { ch = 'C'; if (b) extra.push([x, y]); } else if (ch === '.' && b) ch = 'B'; else if (b) extra.push([x, y]);
+      row += ch;
+    }
+    rows.push(row);
+  }
+  const allow = Object.keys(BLOCKS).filter(k => E.allow[k]); if (!allow.length) allow.push('move');
+  const lv = { id: 'custom', z: 4, name: 'Màn tự tạo', dir: E.dir, max: E.max, allow, map: rows, bat: extra, sol: null, w: E.w, h: E.h, par: null, solProg: null };
+  return lv;
+}
+function edEncode() {
+  const lv = edBuildLevel(); if (!lv) return null;
+  const allow = Object.keys(CODE_LET).filter(k => lv.allow.indexOf(k) >= 0).map(k => CODE_LET[k]).join('');
+  return ['RGP1', E.w, E.h, E.dir, E.max, allow, lv.map.join('/'), lv.bat.map(p => p.join(',')).join(';')].join('|');
+}
+function edDecode(str) {
+  const p = String(str).trim().split('|');
+  if (p[0] !== 'RGP1' || p.length < 7) throw new Error(T('Mã không hợp lệ'));
+  const w = +p[1], h = +p[2], dir = +p[3], max = +p[4];
+  if (!(w >= 3 && w <= 8 && h >= 3 && h <= 8) || !(dir >= 0 && dir <= 3) || !(max >= 1 && max <= 99)) throw new Error(T('Thông số lưới không hợp lệ'));
+  const rows = p[6].split('/'); if (rows.length !== h) throw new Error(T('Số hàng không khớp'));
+  const N = { tiles: [], bat: new Set(), crates: new Set(), robot: null, w, h, dir, max, allow: {} };
+  Object.keys(CODE_LET).forEach(k => { if (p[5].indexOf(CODE_LET[k]) >= 0) N.allow[k] = 1; });
+  let robots = 0, exits = 0;
+  rows.forEach((row, y) => {
+    if (row.length !== w) throw new Error(T('Độ dài hàng {0} không khớp', y + 1));
+    const r = [];
+    for (let x = 0; x < w; x++) {
+      let ch = row[x];
+      if ('.#BXSKD^>v<RrCOFHIPQ1234'.indexOf(ch) < 0) throw new Error(T('Ký tự lạ: {0}', ch));
+      if (ch === 'C') N.crates.add(x + ',' + y);
+      if (ch === 'B' || ch === 'r') N.bat.add(x + ',' + y);
+      if (ch === 'R' || ch === 'r') { N.robot = { x, y }; robots++; }
+      if (ch === 'X') exits++;
+      r.push('BRrC'.indexOf(ch) >= 0 ? '.' : ch);
+    }
+    N.tiles.push(r);
+  });
+  if (robots !== 1) throw new Error(T('Cần đúng 1 robot')); if (!exits) throw new Error(T('Thiếu cổng thoát'));
+  (p[7] || '').split(';').filter(Boolean).forEach(s => { const q = s.split(',').map(Number); if (q[0] >= 0 && q[0] < w && q[1] >= 0 && q[1] < h && '#SD'.indexOf(N.tiles[q[1]][q[0]]) < 0) N.bat.add(q[0] + ',' + q[1]); });
+  return N;
+}
+function edRefreshUI() {
+  if (!E) return;
+  $$('#ed-tools button').forEach(b => b.classList.toggle('on', b.dataset.t === edTool));
+  $('#ed-w').value = E.w; $('#ed-h').value = E.h; $('#ed-max').value = E.max;
+  $('#ed-dir').textContent = ['⬆', '➡', '⬇', '⬅'][E.dir];
+  $$('#ed-allow input').forEach(i => i.checked = !!E.allow[i.dataset.k]);
+}
+function edInit() {
+  edNew(6, 6);
+  const tb = $('#ed-tools');
+  ED_TOOLS.forEach(([k, n]) => { const b = el('button', '', T(n)); b.dataset.vi = n; b.dataset.t = k; b.onclick = () => { edTool = k; Snd.play('ui'); edRefreshUI(); }; tb.appendChild(b); });
+  [3, 4, 5, 6, 7, 8].forEach(n => { $('#ed-w').appendChild(new Option(n, n)); $('#ed-h').appendChild(new Option(n, n)); });
+  const al = $('#ed-allow');
+  Object.keys(BLOCKS).forEach(k => { const l = el('label', '', '<input type="checkbox" data-k="' + k + '"> ' + ICON[k] + ' <span data-vi="' + (k === 'repeat' ? 'Lặp' : k === 'call' ? 'Hàm' : BLOCKS[k].label) + '">' + T(k === 'repeat' ? 'Lặp' : k === 'call' ? 'Hàm' : BLOCKS[k].label) + '</span>'); al.appendChild(l); });
+  al.addEventListener('change', e => { const i = e.target.closest('input'); if (i) { if (i.checked) E.allow[i.dataset.k] = 1; else delete E.allow[i.dataset.k]; } });
+  $('#ed-w').onchange = () => { edResize(+$('#ed-w').value, E.h); edRefreshUI(); };
+  $('#ed-h').onchange = () => { edResize(E.w, +$('#ed-h').value); edRefreshUI(); };
+  $('#ed-max').onchange = () => { E.max = clamp(+$('#ed-max').value || 20, 2, 60); edRefreshUI(); };
+  $('#ed-dir').onclick = () => { E.dir = (E.dir + 1) % 4; edRefreshUI(); };
+  $('#ed-clear').onclick = () => { edNew(E.w, E.h); E.tiles[0][E.w - 1] = 'X'; edRefreshUI(); };
+  $('#ed-test').onclick = () => { const lv = edBuildLevel(); if (lv) { Snd.resume(); loadLevel(lv, 'editor'); } };
+  $('#ed-export').onclick = () => {
+    const s = edEncode(); if (!s) return; $('#ed-code').value = s;
+    try { navigator.clipboard.writeText(s).then(() => toast(T('Đã sao chép mã vào clipboard!')), () => { $('#ed-code').select(); toast(T('Hãy sao chép mã trong ô văn bản')); }); } catch (e) { $('#ed-code').select(); toast(T('Hãy sao chép mã trong ô văn bản')); }
+  };
+  $('#ed-import').onclick = () => { try { E = edDecode($('#ed-code').value); edRefreshUI(); toast(T('Đã nạp màn!')); } catch (e) { toast(T('Lỗi: {0}', e.message)); } };
+  const cv = $('#edCanvas');
+  const cellAt = ev => {
+    const r = cv.getBoundingClientRect(), L = layoutFor(r.width, r.height, E.w, E.h);
+    const x = Math.floor((ev.clientX - r.left - L.ox) / L.cell), y = Math.floor((ev.clientY - r.top - L.oy) / L.cell);
+    return (x >= 0 && y >= 0 && x < E.w && y < E.h) ? { x, y } : null;
+  };
+  const paint = ev => { const c = cellAt(ev); if (!c) return; const k = c.x + ',' + c.y; if (k === edLast) return; edLast = k; edApply(edTool, c.x, c.y); };
+  cv.addEventListener('pointerdown', ev => { edDown = true; edLast = ''; cv.setPointerCapture(ev.pointerId); paint(ev); });
+  cv.addEventListener('pointermove', ev => { if (edDown && edTool !== 'robot' && edTool !== 'bat') paint(ev); });
+  cv.addEventListener('pointerup', () => { edDown = false; });
+  cv.addEventListener('pointercancel', () => { edDown = false; });
+}
+
+/* =====================================================================
+   16. VÒNG LẶP CHÍNH, INPUT, KHỞI TẠO
+   ===================================================================== */
+function fitCanvas(cv, wrap) {
+  const r = wrap.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 3);
+  const w = Math.max(40, Math.floor(r.width)), h = Math.max(40, Math.floor(r.height));
+  if (cv._w === w && cv._h === h && cv._d === dpr) return;
+  cv._w = w; cv._h = h; cv._d = dpr; cv.width = Math.floor(w * dpr); cv.height = Math.floor(h * dpr);
+}
+function fitAll() { fitCanvas($('#board'), $('#boardWrap')); fitCanvas($('#edCanvas'), $('#edWrap')); }
+function drawFrame() {
+  if (G.screen === 'game' && G.world) {
+    const cv = $('#board'), c = cv.getContext('2d'); if (!cv._w) fitAll();
+    c.setTransform(cv._d, 0, 0, cv._d, 0, 0); c.clearRect(0, 0, cv._w, cv._h);
+    const v = G.vis, w = G.world;
+    drawScene(c, cv._w, cv._h, { w: w.w, h: w.h, tiles: w.tiles, bat: v.bat, open: v.open, doorT: v.doorT, total: w.total, collected: v.collected, robot: v, crates: v.crates, step: v.step }, G.time, G.shake);
+  } else if (G.screen === 'editor' && E) {
+    const cv = $('#edCanvas'), c = cv.getContext('2d'); if (!cv._w) fitAll();
+    c.setTransform(cv._d, 0, 0, cv._d, 0, 0); c.clearRect(0, 0, cv._w, cv._h);
+    const L = drawScene(c, cv._w, cv._h, { w: E.w, h: E.h, tiles: E.tiles, bat: E.bat, open: false, forceOpen: true, doorT: 0, total: 0, collected: 0, step: Math.floor(G.time * 1.2), crates: [...E.crates].map(k => { const q = k.split(','); return { x: +q[0], y: +q[1] }; }), robot: E.robot ? { x: E.robot.x, y: E.robot.y, ang: E.dir * 90 } : null }, G.time, 0);
+    c.strokeStyle = 'rgba(60,120,100,.18)'; c.lineWidth = 1; c.beginPath();
+    for (let i = 0; i <= E.w; i++) { c.moveTo(L.ox + i * L.cell, L.oy); c.lineTo(L.ox + i * L.cell, L.oy + E.h * L.cell); }
+    for (let i = 0; i <= E.h; i++) { c.moveTo(L.ox, L.oy + i * L.cell); c.lineTo(L.ox + E.w * L.cell, L.oy + i * L.cell); }
+    c.stroke();
+  } else if (G.screen === 'start') drawHero($('#hero').getContext('2d'), G.time);
+}
+let lastTs = 0;
+function frame(ts) {
+  const dt = Math.min(Math.max((ts - lastTs) / 1000, 0) || 0, CONFIG.maxDelta); lastTs = ts;  // giới hạn delta tối đa
+  const d = (G.screen === 'game' && G.paused) ? 0 : dt;
+  G.time += d;
+  if (G.screen === 'game') { updateRun(d); updateVis(d); }
+  updateParticles(d);
+  drawFrame();
+  requestAnimationFrame(frame);
+}
+function onKey(e) {
+  if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (G.modal) {
+    if (e.key === 'Enter') { const b = $('#modal .btn.primary'); if (b) { e.preventDefault(); b.click(); } }
+    else if ((k === 'p' || e.key === 'Escape') && G.paused) togglePause();
+    else if (e.key === 'Escape') closeModal();
+    return;
+  }
+  if (G.screen !== 'game') return;
+  if (e.key === 'Enter') { e.preventDefault(); if (!(G.run.status === 'running' && G.run.mode === 'auto')) onRunBtn(); }
+  else if (k === 'r') resetRun(), renderProg();
+  else if (k === 'z') undo();
+  else if (k === 'p' || e.key === 'Escape') togglePause();
+  else if (e.key === ' ') { e.preventDefault(); startRun('step'); }
+  else if (k === 'h') useHint();
+}
+function init() {
+  loadSave(); LANG = SAVE.lang === 'en' ? 'en' : 'vi'; G.fnName = T('Hàm A'); applyLang();
+  if (!CONFIG.speed[SAVE.speed]) SAVE.speed = CONFIG.defaultSpeed;
+  G.speed = SAVE.speed;
+  const root = document.documentElement.style;
+  Object.keys(CONFIG.blockColors).forEach(g => { root.setProperty('--c-' + g, CONFIG.blockColors[g]); root.setProperty('--c-' + g + '-d', shade(CONFIG.blockColors[g], -.2)); });
+  updateSndBtns(); edInit();
+  // nút điều hướng
+  $('#btn-play').onclick = () => { Snd.resume(); Snd.play('ui'); let i = LEVELS.findIndex((_, k) => levelStars(k) === 0 && isUnlocked(k)); if (i < 0) { show('map'); return; } loadLevel(LEVELS[i], 'map'); };
+  $('#btn-levels').onclick = () => { Snd.resume(); Snd.play('ui'); show('map'); };
+  $('#btn-editor').onclick = () => { Snd.resume(); Snd.play('ui'); show('editor'); };
+  $('#btn-help').onclick = () => { Snd.resume(); showHelp(); };
+  $('#btn-settings').onclick = () => { Snd.resume(); Snd.play('ui'); showSettings(); };
+  $('#map-settings').onclick = () => { Snd.resume(); Snd.play('ui'); showSettings(); };
+  $('#map-back').onclick = () => show('start');
+  $('#ed-back').onclick = () => show('start');
+  $('#g-back').onclick = () => { G.run.status === 'running' && resetRun(); leaveGame(); };
+  $('#g-pause').onclick = togglePause;
+  $('#b-run').onclick = onRunBtn;
+  $('#b-step').onclick = () => startRun('step');
+  $('#b-reset').onclick = () => { resetRun(); renderProg(); };
+  $('#b-hint').onclick = useHint;
+  $('#b-undo').onclick = undo;
+  $('#tip-x').onclick = hideTip;
+  $$('#speedSeg button').forEach(b => b.onclick = () => { G.speed = b.dataset.s; SAVE.speed = G.speed; persist(); updateCtrl(); });
+  $$('.snd-btn').forEach(b => b.onclick = () => { SAVE.sound = !SAVE.sound; persist(); updateSndBtns(); Snd.resume(); Snd.play('ui'); });
+  // kéo-thả & thao tác trong chương trình
+  document.addEventListener('pointerdown', e => { if (e.target.closest('#prog,#tools')) onDown(e); });
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup', onUp);
+  document.addEventListener('pointercancel', onCancel);
+  document.addEventListener('touchmove', e => { if (D && D.active) e.preventDefault(); }, { passive: false });
+  document.addEventListener('contextmenu', e => { if (e.target.closest('#prog,#tools')) e.preventDefault(); });
+  $('#prog').addEventListener('click', e => {
+    const m = e.target.closest('.mini');
+    if (m) {
+      if (!canEdit()) return;
+      const b = findBlock(m.closest('.blk').dataset.id); if (!b) return;
+      pushHist(); b.n = clamp(b.n + (m.dataset.act === 'inc' ? 1 : -1), CONFIG.repeatMin, CONFIG.repeatMax);
+      editDone(); Snd.play('pick'); return;
+    }
+    const s = e.target.closest('.slot');
+    if (s) { G.target = descOf(s.parentElement); renderProg(); Snd.play('ui'); }
+  });
+  $('#prog').addEventListener('input', e => {
+    if (!e.target.classList.contains('fn-name')) return;
+    G.fnName = e.target.value.trim().slice(0, 12) || T('Hàm');
+    $$('.call-lb').forEach(n => n.textContent = T('Gọi {0}', G.fnName));
+    const t = $('#tools .blk[data-type="call"] .lb'); if (t) t.textContent = T('Gọi {0}', G.fnName);
+    if (!G.custom) DRAFTS[G.level.id] = { P: clone(P), fn: G.fnName };
+  });
+  document.addEventListener('click', e => { const b = e.target.closest('button'); if (b) b.blur(); }); // tránh Enter/Space kích hoạt lại nút
+  document.addEventListener('keydown', onKey);
+  if (window.ResizeObserver) { const ro = new ResizeObserver(fitAll); ro.observe($('#boardWrap')); ro.observe($('#edWrap')); }
+  window.addEventListener('resize', fitAll);
+  window.addEventListener('orientationchange', () => setTimeout(fitAll, 120));
+  document.addEventListener('visibilitychange', () => { if (document.hidden && G.screen === 'game' && G.run && G.run.status === 'running' && !G.modal) togglePause(); });
+  show('start');
+  requestAnimationFrame(frame);
+}
+init();
+</script>
+</body>
+</html>
